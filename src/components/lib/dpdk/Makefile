@@ -47,7 +47,7 @@ DISABLED_DRIVERS=-Ddisable_drivers=common/mvep,common/mlx5,af_xdp,net/ipn3ke,net
 	net/ngbe,net/null,net/pcap,net/qede,net/softnic,net/thunderx,net/txgbe,net/vdev_netvsc,baseband/la12xx,dma/idxd,dma/ioat,$\
 	dma/skeleton,net/octeontx_ep,
 
-MUSL_BIN_PATH = PATH=$(shell pwd)/../libc/musl-1.2.0/bin/:$(PATH)
+MUSL_BIN_PATH = PATH=$(shell pwd)/../libc/musl-1.2.0/bin/:/home/spadek67424/.local/bin:/home/spadek67424/.cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/usr/lib/wsl/lib:
 config: 
 	$(info Configing DPDK)
 #	TODO: make this copy more generic so that it can be applied to different OS platforms like Fedora
@@ -63,7 +63,7 @@ config:
 	cd $(DPDK_DIR);\
 	$(MUSL_BIN_PATH) meson build \
 	--cross-file $(shell pwd)/cross_x86_64_composite_with_musl \
-	-Dmachine=default -Dc_args="-nostdlib -nostdinc -mcmodel=large -DCOMPOSITE_EXISTS $(DPDK_ADAPTER_INC)" \
+	-Dmachine=default -Dc_args="-nostdlib -nostdinc -fno-function-cse -DCOMPOSITE_EXISTS $(DPDK_ADAPTER_INC)" \
 	-Ddefault_library=static -Ddebug=true \
 	-Doptimization=0 -Dincludedir=$(shell pwd)/$(DPDK_INC_DIR) \
 	-Dprefix=$(shell pwd)/$(DPDK_INSTALL_DIR) $(DISABLED_DRIVERS)

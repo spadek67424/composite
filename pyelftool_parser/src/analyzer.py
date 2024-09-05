@@ -9,11 +9,12 @@ from elftools.elf.sections import (
     NoteSection, SymbolTableSection, SymbolTableIndexSection
 )
 class disassembler:
-    def __init__(self, path):
+    def __init__(self, path, entry_function):
         self.path = path
         self.inst = dict()
         self.symbol = dict()
         self.vertex = dict()
+        self.entry_function = entry_function
         self.entry_pc = 0
         self.exit_pc = 0
         self.acquire_stack_address = 0
@@ -48,7 +49,7 @@ class disassembler:
                     self.vertex[symbol['st_value']] = symbol.name
                     log("here")
                     log(symbol.name, symbol['st_value'])
-                    if(symbol.name == '__cosrt_upcall_entry'): ## set up the entry pc.
+                    if(symbol.name == self.entry_function): ## set up the entry pc.
                         self.entry_pc = symbol['st_value']
                         log("Set up entry point")
                         log(hex(self.entry_pc))
@@ -128,12 +129,11 @@ class parser:
                 ######
             self.execute.exe(self.inst[self.register.reg["pc"]], self.edge, vertexfrom)
             
-            
             #### set up next instruction pc
     
             if (self.index == index_list.index(self.register.reg["pc"])):  ## fetch next instruction
                 if self.inst[self.register.reg["pc"]].id == (X86_INS_RET): ## ret instruction, go to return address.
-                    self.index = index_list.index(self.retcallpc.pop())
+                    self.index = index_list.index(self.retcallpc.pop()) if len(self.retcallpc) > 0 else self.index + 1
                 elif index_list[self.index + 1] in self.symbol.keys() and self.retjmpflag == 1: ## Assuming the return to return address if going to the end of function.
                     self.index = index_list.index(self.retjmppc)
                     self.retjmpflag = 0
@@ -179,9 +179,18 @@ if __name__ == '__main__':
     
     ## path = "../testbench/composite/system_binaries/cos_build-test/global.sched/sched.pfprr_quantum_static.global.sched"
     ## path = "/home/minghwu/work/minghwu/composite/system_binaries/cos_build-test/global.ping/tests.unit_pingpong.global.ping"
-    path = sys.argv[1]
+    print(len(sys.argv))
+    if len(sys.argv) >=3:
+        entry_function = sys.argv[2]
+    else:
+        entry_function = "__cosrt_upcall_entry"
+    if len(sys.argv) >=2:
+        path = sys.argv[1]
+    else:
+        path = "../../system_binaries/cos_build-test/global.ping/tests.unit_pingpong.global.ping"
     
-    disassembler = disassembler(path)
+        
+    disassembler = disassembler(path, entry_function)
     disassembler.disasmsymbol()
     disassembler.disasminst()
     log("program entry:"+ str(disassembler.entry_pc))

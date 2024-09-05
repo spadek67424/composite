@@ -477,7 +477,7 @@ lapic_timer_handler(struct pt_regs *regs)
 static void
 delay_us(u32_t us)
 {
-	unsigned long long hz = CPU_GHZ, hz_per_us = hz * 1000;
+	unsigned long long hz = 2.496, hz_per_us = hz * 1000;
 	unsigned long long end;
 	volatile unsigned long long tsc;
 

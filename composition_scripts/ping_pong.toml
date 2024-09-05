@@ -4,6 +4,7 @@ description = "Simple system: the ping pong test for IPC, and initialization ord
 [[components]]
 name = "booter"
 img  = "no_interface.llbooter"
+constants = [{variable = "max_stack_sz_byte_order", value = "0"}]
 implements = [{interface = "init"}]
 deps = [{srv = "kernel", interface = "init", variant = "kernel"}]
 constructor = "kernel"
@@ -11,6 +12,7 @@ constructor = "kernel"
 [[components]]
 name = "ping"
 img  = "tests.unit_pingpong"
+constants = [{variable = "max_stack_sz_byte_order", value = "0"}]
 deps = [{srv = "pong", interface = "pong"},
         {srv = "booter", interface = "init"}]
 baseaddr = "0x1600000"
@@ -19,6 +21,7 @@ constructor = "booter"
 [[components]]
 name = "pong"
 img  = "pong.pingpong"
+constants = [{variable = "max_stack_sz_byte_order", value = "0"}]
 deps = [{srv = "booter", interface = "init"}]
 implements = [{interface = "pong"}]
 constructor = "booter"

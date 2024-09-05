@@ -129,12 +129,11 @@ class parser:
                 ######
             self.execute.exe(self.inst[self.register.reg["pc"]], self.edge, vertexfrom)
             
-            
             #### set up next instruction pc
     
             if (self.index == index_list.index(self.register.reg["pc"])):  ## fetch next instruction
                 if self.inst[self.register.reg["pc"]].id == (X86_INS_RET): ## ret instruction, go to return address.
-                    self.index = index_list.index(self.retcallpc.pop())
+                    self.index = index_list.index(self.retcallpc.pop()) if len(self.retcallpc) > 0 else self.index + 1
                 elif index_list[self.index + 1] in self.symbol.keys() and self.retjmpflag == 1: ## Assuming the return to return address if going to the end of function.
                     self.index = index_list.index(self.retjmppc)
                     self.retjmpflag = 0

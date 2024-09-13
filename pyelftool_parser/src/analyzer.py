@@ -16,14 +16,14 @@ class disassembler:
         self.symbol = dict()            ## mapping address to symbol
         self.symbol_address = dict()    ## mapping symbol to address
         self.syn_invocation = dict()    ## mapping the synchronization symbol address to target function
-        self.invo_call =dict()   ## record the invocation call address for fetching pc 
+        self.invo_call_jmp_table =dict()   ## hardcode the invocation call/jmp address for fetching pc 
         self.vertex = dict()            ## construct the calling graph
         self.entry_function = entry_function
         self.entry_pc = 0
         self.exit_pc = 0
         self.acquire_stack_size = 0
 
-    def disasminst(self):
+    def disasminst(self):  ## I hardcode a lot of jump call address here for execution and function pointer.
         pc_flag = 0
         invo_flag = 0
         symbol_address = 0
@@ -49,10 +49,12 @@ class disassembler:
                     symbol_address = inst.address
                 if invo_flag == 1 and inst.id == X86_INS_CALL:
                     invo_flag = 0
-                    self.invo_call[inst.address] =  self.syn_invocation[symbol_address]
+                    self.invo_call_jmp_table[inst.address] =  self.syn_invocation[symbol_address]
                     
-                if  inst.address in self.symbol and self.symbol[inst.address] == "custom_acquire_stack":  ## try to catch the movabs which is in the acquire_stack function to set rsp.
+                if inst.address in self.symbol and self.symbol[inst.address] == "custom_acquire_stack":  ## try to catch the movabs which is in the acquire_stack function to set rsp.
                     stack_flag = 1
+                if stack_flag == 1 and inst.id == X86_INS_JMP:
+                     self.invo_call_jmp_table[inst.address] =  self.syn_invocation[symbol_address]
                 if stack_flag == 1 and inst.id == X86_INS_MOVABS:
                     stack_flag = 0
                     tempstack =0
@@ -62,6 +64,7 @@ class disassembler:
                     self.acquire_stack_size = tempstack
                     log("stack_size_begin")
                     log(self.acquire_stack_size)
+                
                 log(f'0x{inst.address:x}:\t{inst.mnemonic}\t{inst.op_str}')
 
     def disasmsymbol(self):
@@ -137,14 +140,14 @@ class disassembler:
                 )
     
 class parser:
-    def __init__(self, symbol, inst, register, execute, exit_pc, acquire_stack_address, invo_call):
+    def __init__(self, symbol, inst, register, execute, exit_pc, acquire_stack_address, invo_call_jmp_table):
         self.symbol = symbol 
         self.inst = inst
         self.stacklist = []
         self.stackfunction = []
         self.register = register
         self.execute = execute
-        self.invo_call = invo_call
+        self.invo_call_jmp_table = invo_call_jmp_table
         self.edge = set()
         self.vertex = set()
         self.index = 0
@@ -156,60 +159,63 @@ class parser:
         self.seenlist = [] ## handle the while loop jmp.
         
     def stack_analyzer(self):
-        index_list = list(self.inst.keys())
-        index_list.append(-1) ## dummy value for last iteration.
-        self.index = index_list.index(self.register.reg["pc"])
+        address_list = list(self.inst.keys())  ## a list for instruction address.
+        address_list.append(-1) ## dummy value for last iteration.
+        self.index = address_list.index(self.register.reg["pc"]) ## index for each instruction address.
         nextinstRip = list(self.inst.keys())
         nextinstRip.append(-1) ## dummy value for last iteration.
         while(self.register.reg["pc"] != self.exit_pc):
             self.register.updaterip(nextinstRip[self.index + 1 if self.index + 1 in nextinstRip else self.index]) ## catch the rip for memory instruction.
-            if self.register.reg["call"] == 0 and self.register.reg["pc"] in self.symbol.keys():  ## check function block (as basic block but we use function as unit.)
+            if self.register.reg["call_or_jmp"] == 0 and self.register.reg["pc"] in self.symbol.keys():  ## check function block (as basic block but we use function as unit.)
                 self.stackfunction.append(self.symbol[self.register.reg["pc"]])
                 logstack(self.symbol[self.register.reg["pc"]])   ## TODO: here is error.
                 self.register.updatestackreg()
                 self.stacklist.append(self.register.reg["stack"])
-                self.register.clean()
-                self.register.resetstack() 
+                self.register.cleanstack()
+                self.register.cleaninvocation()
+                self.register.resetrsp() 
                 ###### Graph
                 vertexfrom = self.register.reg["pc"]
                 self.vertex.add(vertexfrom)
                 ######
-            self.register.reg["call"] = 0  # clean the call inst.
+            self.register.cleancalljmp()  # clean the call inst.
             self.execute.exe(self.inst[self.register.reg["pc"]], self.edge, vertexfrom)
             self.register.updatestackreg()
-            #### set up next instruction pc
-    
-            if (self.register.reg["invo"] == 0 and self.index == index_list.index(self.register.reg["pc"])):  ## fetch next instruction
+            #### fetch next instruction pc
+            if address_list[self.index] in self.invo_call_jmp_table:
+                self.index = address_list.index(self.invo_call_jmp_table[address_list[self.index]])
+            elif (self.register.reg["invo"] == 0 and self.index == address_list.index(self.register.reg["pc"])):  ## fetch next instruction
                 if self.inst[self.register.reg["pc"]].id == (X86_INS_RET): ## ret instruction, go to return address.
-                    self.index = index_list.index(self.retcallpc.pop()) if len(self.retcallpc) > 0 else self.index + 1
-                elif index_list[self.index + 1] in self.symbol.keys() and self.retjmpflag == 1: ## Assuming the return to return address if going to the end of function.
-                    self.index = index_list.index(self.retjmppc)
+                    self.index = address_list.index(self.retcallpc.pop()) if len(self.retcallpc) > 0 else self.index + 1
+                elif address_list[self.index + 1] in self.symbol.keys() and self.retjmpflag == 1: ## Assuming the return to return address if going to the end of function.
+                    self.index = address_list.index(self.retjmppc)
                     self.retjmpflag = 0
                 else:
                     self.index = self.index + 1
             else:     ## handle the call and jmp instruction
-                if self.inst[index_list[self.index]].id == (X86_INS_CALL): ## if this is call, append the return address to stack.
-                    self.retcallpc.append(index_list[self.index + 1])
+                if self.inst[address_list[self.index]].id == (X86_INS_CALL): ## if this is call, append the return address to stack.
+                    self.retcallpc.append(address_list[self.index + 1])
                     if self.register.reg["invo"] == 1:  ## handle the synchronization invocation.
-                        if self.register.reg["pc"] in self.invo_call:  # catch it is synchronization
-                            self.index = index_list.index(self.invo_call[self.register.reg["pc"]])  ## trying to search the pc in the synchronization table.
-                            self.edge.add(hex(self.register.reg["pc"]), index_list[self.index])
+                        if self.register.reg["pc"] in self.invo_call_jmp_table:  # catch it is synchronization
+                            self.index = address_list.index(self.invo_call_jmp_table[self.register.reg["pc"]])  ## trying to search the pc in the synchronization table.
+                            self.edge.add(hex(self.register.reg["pc"]), address_list[self.index])
                         else:   # this is unknown function pointer.
                             self.index = self.index + 1 
                     else:
-                        self.index = index_list.index(self.register.reg["pc"])
+                        self.index = address_list.index(self.register.reg["pc"])
                     self.register.reg["invo"] = 0 ## clean the invo reg.
                     
-                else:  ## handle the while loop of jmp.
-                    self.retjmppc = index_list[self.index + 1]  ## set the return point
+                else:  ## handle jmp inst 
+                    self.retjmppc = address_list[self.index + 1]  ## set the return point
                     self.retjmpflag = 1
-                    if self.register.reg["pc"] not in self.seenlist:
-                        self.index = index_list.index(self.register.reg["pc"])
+                    if self.register.reg["pc"] not in self.seenlist: ## handle the while loop of jmp.
+                        self.index = address_list.index(self.register.reg["pc"])
                         self.seenlist.append(self.register.reg["pc"])
                     else:
                         self.index = self.index + 1
             ####
-            self.register.reg["pc"] = index_list[self.index] ## Setting the pc from index.
+            print(self.index)
+            self.register.reg["pc"] = address_list[self.index] ## Setting the pc from index.
             
         self.stacklist.append(self.register.reg["stack"])
         self.stacklist = self.stacklist[1:]
@@ -276,7 +282,7 @@ if __name__ == '__main__':
                     execute, 
                     disassembler.exit_pc, 
                     disassembler.acquire_stack_address,
-                    disassembler.invo_call)
+                    disassembler.invo_call_jmp_table)
     
     driver(parser)
     

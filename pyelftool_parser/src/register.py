@@ -36,7 +36,7 @@ class register:
         self.reg["enter"] = 0
         self.reg["stack"] = 0
         self.reg["invo"] = 0 ## spectial reg for check synchronization invocation.
-        self.reg["call"] = 0 ## spectial reg for check synchronization invocation.
+        self.reg["call_or_jmp"] = 0 ## spectial reg for check synchronization invocation.
     def clean(self):
         self.reg["rax"] = 0
         self.reg["rbx"] = 0
@@ -62,10 +62,13 @@ class register:
         self.reg["xmm6"] = 0
         self.reg["xmm7"] = 0
         self.reg["enter"] = 0
+    def cleanstack(self):
         self.reg["stack"] = 0
+    def cleancalljmp(self):
+        self.reg["call_or_jmp"] = 0
+    def cleaninvocation(self):
         self.reg["invo"] = 0
-        self.reg["call"] = 0
-    def resetstack(self):
+    def resetrsp(self):
         self.reg["rspbegin"] = self.stacksizeinit
         self.reg["rsp"] = self.stacksizeinit
     def Isreg(self, s):

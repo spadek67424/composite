@@ -21,12 +21,13 @@ class disassembler:
         self.entry_function = entry_function
         self.entry_pc = 0
         self.exit_pc = 0
-        self.acquire_stack_address = 0
+        self.acquire_stack_size = 0
 
     def disasminst(self):
         pc_flag = 0
         invo_flag = 0
         symbol_address = 0
+        stack_flag = 0
         with open(self.path, 'rb') as f:
             elf = ELFFile(f)
             code = elf.get_section_by_name('.text')
@@ -34,22 +35,34 @@ class disassembler:
             addr = code['sh_addr']
             md = Cs(CS_ARCH_X86, CS_MODE_64)
             md.detail = True
-            for i in md.disasm(ops, addr):
-                self.inst[i.address] = (i)
-                if (i.address in self.symbol):  ## it is to catch the next symbol start. @minghwu: I think it could have a better way to do this.
+            for inst in md.disasm(ops, addr):
+                self.inst[inst.address] = (inst)
+                if (inst.address in self.symbol):  ## it is to catch the next symbol start. @minghwu: I think it could have a better way to do this.
                     pc_flag = 0
-                if (i.address == self.entry_pc): ## when it is entry point, set the flag = 1 to catch exitpoint.
+                if (inst.address == self.entry_pc): ## when it is entry point, set the flag = 1 to catch exitpoint.
                     pc_flag = 1
                 if (pc_flag == 1):               ## catch the point until the next symbol, means it is exit point.
-                    self.exit_pc = i.address
+                    self.exit_pc = inst.address
                 
-                if i.address in self.syn_invocation:
+                if inst.address in self.syn_invocation:  ## setting up the invocation table.
                     invo_flag = 1
-                    symbol_address = i.address
-                if invo_flag ==1 and i.id == X86_INS_CALL:
+                    symbol_address = inst.address
+                if invo_flag == 1 and inst.id == X86_INS_CALL:
                     invo_flag = 0
-                    self.invo_call[i.address] =  self.syn_invocation[symbol_address]
-                log(f'0x{i.address:x}:\t{i.mnemonic}\t{i.op_str}')
+                    self.invo_call[inst.address] =  self.syn_invocation[symbol_address]
+                    
+                if  inst.address in self.symbol and self.symbol[inst.address] == "custom_acquire_stack":  ## try to catch the movabs which is in the acquire_stack function to set rsp.
+                    stack_flag = 1
+                if stack_flag == 1 and inst.id == X86_INS_MOVABS:
+                    stack_flag = 0
+                    tempstack =0
+                    for i in inst.operands:
+                        if i.type == X86_OP_IMM:
+                            tempstack = i.imm
+                    self.acquire_stack_size = tempstack
+                    log("stack_size_begin")
+                    log(self.acquire_stack_size)
+                log(f'0x{inst.address:x}:\t{inst.mnemonic}\t{inst.op_str}')
 
     def disasmsymbol(self):
         with open(self.path, 'rb') as f:
@@ -146,14 +159,17 @@ class parser:
         index_list = list(self.inst.keys())
         index_list.append(-1) ## dummy value for last iteration.
         self.index = index_list.index(self.register.reg["pc"])
+        acquire_stack_flag = 0
         nextinstRip = list(self.inst.keys())
         nextinstRip.append(-1) ## dummy value for last iteration.
         while(self.register.reg["pc"] != self.exit_pc):
             self.register.updaterip(nextinstRip[self.index + 1 if self.index + 1 in nextinstRip else self.index]) ## catch the rip for memory instruction.
+            if  self.register.reg["pc"] in self.symbol and self.symbol[self.register.reg["pc"]] == 'custom_acquire_stack':
+                acquire_stack_flag = 1
             if self.register.reg["call"] == 0 and self.register.reg["pc"] in self.symbol.keys():  ## check function block (as basic block but we use function as unit.)
                 self.stackfunction.append(self.symbol[self.register.reg["pc"]])
                 logstack(self.symbol[self.register.reg["pc"]])   ## TODO: here is error.
-                self.register.updatestackreg(self.symbol[self.register.reg["pc"]] == 'custom_acquire_stack') ## if it is acquiring stack address, do not setting the stack size.
+                self.register.updatestackreg()
                 self.stacklist.append(self.register.reg["stack"])
                 self.register.clean()
                 
@@ -163,6 +179,7 @@ class parser:
                 ######
             self.register.reg["call"] = 0  # clean the call inst.
             self.execute.exe(self.inst[self.register.reg["pc"]], self.edge, vertexfrom)
+            self.register.updatestackreg()
             #### set up next instruction pc
     
             if (self.register.reg["invo"] == 0 and self.index == index_list.index(self.register.reg["pc"])):  ## fetch next instruction
@@ -230,7 +247,7 @@ if __name__ == '__main__':
     
     ## path = "../testbench/composite/system_binaries/cos_build-test/global.sched/sched.pfprr_quantum_static.global.sched"
     ## path = "/home/minghwu/work/minghwu/composite/system_binaries/cos_build-test/global.ping/tests.unit_pingpong.global.ping"
-    print(len(sys.argv))
+    
     if len(sys.argv) >=3:
         entry_function = sys.argv[2]
     else:
@@ -249,7 +266,8 @@ if __name__ == '__main__':
     disassembler.sym_analyzer()
     log("program entry:"+ str(disassembler.entry_pc))
     log("program exit:"+ str(disassembler.exit_pc))
-    register = register.register()
+    log("program stacksize"+ str(disassembler.acquire_stack_size))
+    register = register.register(disassembler.acquire_stack_size)
     register.reg["pc"] = disassembler.entry_pc
     execute = execute.execute(register)
     parser = parser(disassembler.symbol, 
@@ -277,6 +295,7 @@ if __name__ == '__main__':
         i = i + 1
     logresult(parser.edge)
     stacksize = min(parser.stacklist)
+    logresult(stacksize)
     logrust(PowerOf2(abs(stacksize)))
     
     

@@ -1,6 +1,6 @@
 from debug import log, logstack
 class register:
-    def __init__(self):
+    def __init__(self, stacksizeinit):
         self.reglist = ["rax", "rbx", "rcx", "rdx", "rdi", "rsi", "rbp", "rsp", 
                         "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15", 
                         "eax", "ebx", "ecx", "edx", "edi", "esi", "ebp", "esp",
@@ -14,7 +14,7 @@ class register:
         self.reg["rdi"] = 0
         self.reg["rsi"] = 0
         self.reg["rbp"] = 0
-        self.reg["rspbegin"] = 0
+        self.reg["rspbegin"] = stacksizeinit
         self.reg["rsp"] = 0
         self.reg["r8"] = 0
         self.reg["r9"] = 0
@@ -44,7 +44,7 @@ class register:
         self.reg["rdi"] = 0 
         self.reg["rsi"] = 0
         self.reg["rbp"] = 0
-        self.reg["rspbegin"] = self.reg["rsp"]
+        ##  self.reg["rspbegin"] = self.reg["rsp"]
         ##　self.reg["rsp"] = 0
         self.reg["r8"] = 0
         self.reg["r9"] = 0
@@ -134,9 +134,9 @@ class register:
     def updaterip(self, key):
         if key != -1:
             self.reg["rip"] = key
-    def updatestackreg(self, acquire_stack_flag):
+    def updatestackreg(self):
         logstack("comparison:")
         logstack(self.reg["rsp"])
         logstack(self.reg["rspbegin"])
-        self.reg["stack"] =  self.reg["rsp"] - self.reg["rspbegin"]  ## catch the maximum stack, but I use min because stack is negative.
+        self.reg["stack"] =  min(self.reg["stack"], self.reg["rsp"] - self.reg["rspbegin"])  ## catch the maximum stack, but I use min because stack is negative.
         logstack(self.reg["stack"])

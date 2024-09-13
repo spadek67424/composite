@@ -182,7 +182,9 @@ class parser:
             self.execute.exe(self.inst[self.register.reg["pc"]], self.edge, vertexfrom)
             self.register.updatestackreg()
             #### fetch next instruction pc
-            if address_list[self.index] in self.invo_call_jmp_table:
+            if address_list[self.index] in self.invo_call_jmp_table:  ### hardcode the call/jmp table, we jmp to target address.
+                self.retcallpc.append(address_list[self.index + 1])
+                self.edge.add((hex(address_list[self.index]), hex(self.invo_call_jmp_table[address_list[self.index]])))
                 self.index = address_list.index(self.invo_call_jmp_table[address_list[self.index]])
             elif (self.register.reg["invo"] == 0 and self.index == address_list.index(self.register.reg["pc"])):  ## fetch next instruction
                 if self.inst[self.register.reg["pc"]].id == (X86_INS_RET): ## ret instruction, go to return address.
@@ -195,24 +197,20 @@ class parser:
             else:     ## handle the call and jmp instruction
                 if self.inst[address_list[self.index]].id == (X86_INS_CALL): ## if this is call, append the return address to stack.
                     self.retcallpc.append(address_list[self.index + 1])
-                    if self.register.reg["invo"] == 1:  ## handle the synchronization invocation.
-                        if self.register.reg["pc"] in self.invo_call_jmp_table:  # catch it is synchronization
-                            self.index = address_list.index(self.invo_call_jmp_table[self.register.reg["pc"]])  ## trying to search the pc in the synchronization table.
-                            self.edge.add(hex(self.register.reg["pc"]), address_list[self.index])
-                        else:   # this is unknown function pointer.
-                            self.index = self.index + 1 
+                    if self.register.reg["invo"] == 1:  ## handle unknown function pointer.
+                        self.index = self.index + 1 
                     else:
                         self.index = address_list.index(self.register.reg["pc"])
-                    self.register.reg["invo"] = 0 ## clean the invo reg.
-                    
+                    self.register.reg["invo"] = 0 ## clean the invo reg.        
                 else:  ## handle jmp inst 
                     self.retjmppc = address_list[self.index + 1]  ## set the return point
                     self.retjmpflag = 1
                     if self.register.reg["pc"] not in self.seenlist: ## handle the while loop of jmp.
                         self.index = address_list.index(self.register.reg["pc"])
                         self.seenlist.append(self.register.reg["pc"])
-                    else:
+                    else:  ## unknown function pointer
                         self.index = self.index + 1
+                    self.register.reg["invo"] = 0 ## clean the invo reg.
             ####
             print(self.index)
             self.register.reg["pc"] = address_list[self.index] ## Setting the pc from index.

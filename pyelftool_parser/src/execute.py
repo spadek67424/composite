@@ -159,9 +159,7 @@ class execute:
                      self.register.Setreg(dst, self.register.Getregwithname(dst) + imm)
                 else:
                     self.register.Setreg(dst, self.register.Getregwithname(dst) + self.register.Getregwithname(src))
-            elif inst.id == (X86_INS_ENTER):
-                loginst(hex(inst.address), inst.mnemonic, inst.op_str)
-            elif inst.id == (X86_INS_JMP): ## Not yet implement the simulator
+            if inst.id == (X86_INS_JMP): ## Not yet implement the simulator
                 self.reg["call_or_jmp"] = 1
                 if (not flagimm):
                     logerror("here is dynamic jmp.")

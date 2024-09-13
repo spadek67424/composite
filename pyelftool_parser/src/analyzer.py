@@ -198,7 +198,7 @@ class parser:
                 if self.inst[address_list[self.index]].id == (X86_INS_CALL): ## if this is call, append the return address to stack.
                     self.retcallpc.append(address_list[self.index + 1])
                     if self.register.reg["invo"] == 1:  ## handle unknown function pointer.
-                        self.index = self.index + 1 
+                        self.index = self.index + 1
                     else:
                         self.index = address_list.index(self.register.reg["pc"])
                     self.register.reg["invo"] = 0 ## clean the invo reg.        

@@ -1,7 +1,7 @@
-DEBUG = True
+DEBUG = False
 DEBUGinst = True
-DEBUGresult = False
-DEBUGcall = False
+DEBUGresult = True
+DEBUGcall = True
 DEBUGerror = False
 DEBUGstack = True
 DEBUGrust = True

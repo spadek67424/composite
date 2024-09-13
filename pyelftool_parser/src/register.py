@@ -6,6 +6,7 @@ class register:
                         "eax", "ebx", "ecx", "edx", "edi", "esi", "ebp", "esp",
                         "xmm0", "xmm1", "xmm2", "xmm3", "xmm4", "xmm5", "xmm6", "xmm7"]
         self.reg = dict()
+        self.stacksizeinit = stacksizeinit
         self.reg["pc"] = 0
         self.reg["rax"] = 0
         self.reg["rbx"] = 0
@@ -15,7 +16,7 @@ class register:
         self.reg["rsi"] = 0
         self.reg["rbp"] = 0
         self.reg["rspbegin"] = stacksizeinit
-        self.reg["rsp"] = 0
+        self.reg["rsp"] = stacksizeinit
         self.reg["r8"] = 0
         self.reg["r9"] = 0
         self.reg["r10"] = 0
@@ -44,8 +45,6 @@ class register:
         self.reg["rdi"] = 0 
         self.reg["rsi"] = 0
         self.reg["rbp"] = 0
-        ##  self.reg["rspbegin"] = self.reg["rsp"]
-        ##　self.reg["rsp"] = 0
         self.reg["r8"] = 0
         self.reg["r9"] = 0
         self.reg["r10"] = 0
@@ -66,6 +65,9 @@ class register:
         self.reg["stack"] = 0
         self.reg["invo"] = 0
         self.reg["call"] = 0
+    def resetstack(self):
+        self.reg["rspbegin"] = self.stacksizeinit
+        self.reg["rsp"] = self.stacksizeinit
     def Isreg(self, s):
         if s in self.reglist:
             return True

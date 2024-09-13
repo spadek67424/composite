@@ -159,20 +159,17 @@ class parser:
         index_list = list(self.inst.keys())
         index_list.append(-1) ## dummy value for last iteration.
         self.index = index_list.index(self.register.reg["pc"])
-        acquire_stack_flag = 0
         nextinstRip = list(self.inst.keys())
         nextinstRip.append(-1) ## dummy value for last iteration.
         while(self.register.reg["pc"] != self.exit_pc):
             self.register.updaterip(nextinstRip[self.index + 1 if self.index + 1 in nextinstRip else self.index]) ## catch the rip for memory instruction.
-            if  self.register.reg["pc"] in self.symbol and self.symbol[self.register.reg["pc"]] == 'custom_acquire_stack':
-                acquire_stack_flag = 1
             if self.register.reg["call"] == 0 and self.register.reg["pc"] in self.symbol.keys():  ## check function block (as basic block but we use function as unit.)
                 self.stackfunction.append(self.symbol[self.register.reg["pc"]])
                 logstack(self.symbol[self.register.reg["pc"]])   ## TODO: here is error.
                 self.register.updatestackreg()
                 self.stacklist.append(self.register.reg["stack"])
                 self.register.clean()
-                
+                self.register.resetstack() 
                 ###### Graph
                 vertexfrom = self.register.reg["pc"]
                 self.vertex.add(vertexfrom)
@@ -218,14 +215,17 @@ class parser:
         self.stacklist = self.stacklist[1:]
         return (self.stackfunction,self.stacklist)
     
-def cleanresult(parser): ## remove the custom_acquire_stack function from the result.
+def cleanresult(parser, dissasmbler): ## remove the custom_acquire_stack function from the result.
     index = 0
+    
     for i in parser.stackfunction:
         if i == "custom_acquire_stack":
             parser.stackfunction.remove("custom_acquire_stack")
             del parser.stacklist[index]
             return
         index = index + 1
+    
+    
 def driver(parser):
     
     parser.stack_analyzer()
@@ -280,7 +280,6 @@ if __name__ == '__main__':
     
     driver(parser)
     
-    cleanresult(parser)
     logresult(parser.stackfunction)
     i = 0
     for j in parser.stackfunction:
@@ -294,6 +293,7 @@ if __name__ == '__main__':
         logresult(j)
         i = i + 1
     logresult(parser.edge)
+    
     stacksize = min(parser.stacklist)
     logresult(stacksize)
     logrust(PowerOf2(abs(stacksize)))

@@ -34,6 +34,8 @@ class register:
         self.reg["xmm7"] = 0
         self.reg["enter"] = 0
         self.reg["stack"] = 0
+        self.reg["invo"] = 0 ## spectial reg for check synchronization invocation.
+        self.reg["call"] = 0 ## spectial reg for check synchronization invocation.
     def clean(self):
         self.reg["rax"] = 0
         self.reg["rbx"] = 0
@@ -62,6 +64,8 @@ class register:
         self.reg["xmm7"] = 0
         self.reg["enter"] = 0
         self.reg["stack"] = 0
+        self.reg["invo"] = 0
+        self.reg["call"] = 0
     def Isreg(self, s):
         if s in self.reglist:
             return True

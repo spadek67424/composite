@@ -95,10 +95,9 @@ class disassembler:
                             self.syn_invocation[symbol['st_value']] = self.symbol_address["__cosrt_c_cosrtdefault"]
                             
     def disasmcalljmp(self):  ## I hardcode a lot of jump call address here for execution and function pointer. 
-        invo_flag = 0
-        symbol_address = 0
-        print("syn_invocation")
-        print(self.syn_invocation) 
+        
+        # print("syn_invocation")
+        # print(self.syn_invocation) 
         with open(self.path, 'rb') as f:
             elf = ELFFile(f)
             code = elf.get_section_by_name('.text')
@@ -106,17 +105,25 @@ class disassembler:
             addr = code['sh_addr']
             md = Cs(CS_ARCH_X86, CS_MODE_64)
             md.detail = True
-            
+            flagimm = 0
             ## TODO : it is not working for booter.
-            '''    
             for inst in md.disasm(ops, addr): ## decode the call and jmp address here.
-                if inst.id == X86_INS_CALL or inst.id == X86_INS_JMP or inst.id == X86_INS_JE or inst.id == X86_INS_JLE or inst.id == X86_INS_JGE or inst.id == X86_INS_JG or inst.id == X86_INS_JNE:
-                    if i.type != X86_OP_IMM and len(inst.operands) == 1: ## check it is not function pointer and hardcode the call/jmp table.
+                # print(hex(inst.address))
+                if len(inst.operands) == 1 and (inst.id == X86_INS_CALL or inst.id == X86_INS_JMP or inst.id == X86_INS_JE or inst.id == X86_INS_JLE or inst.id == X86_INS_JGE or inst.id == X86_INS_JG or inst.id == X86_INS_JNE): ## check it is not function pointer and hardcode the call/jmp table.
+                    for i in inst.operands:
+                        if i.type == X86_OP_IMM: ## check it is not function pointer.
+                            flagimm = 1
+                    if flagimm == 1:            ## build up the static call/jmp table
                         self.invo_call_jmp_table[inst.address] = int(inst.op_str, 0)
-            '''
-        print("invo_call_jmp_table")
-        print(self.invo_call_jmp_table.keys())
-        print(self.invo_call_jmp_table)
+                    if flagimm == 0:
+                        print(hex(inst.address))
+                    flagimm = 0
+
+                
+
+
+        ## print("invo_call_jmp_table")
+        ## print(self.invo_call_jmp_table)
     
               
     def sym_analyzer(self):

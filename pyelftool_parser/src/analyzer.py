@@ -23,10 +23,8 @@ class disassembler:
         self.exit_pc = 0
         self.acquire_stack_size = 0
 
-    def disasminst(self):  ## I hardcode a lot of jump call address here for execution and function pointer.
+    def disasminst(self):  ## decode the inst for execute
         pc_flag = 0
-        invo_flag = 0
-        symbol_address = 0
         stack_flag = 0
         with open(self.path, 'rb') as f:
             elf = ELFFile(f)
@@ -43,21 +41,13 @@ class disassembler:
                     pc_flag = 1
                 if (pc_flag == 1):               ## catch the point until the next symbol, means it is exit point.
                     self.exit_pc = inst.address
-                
-                if inst.address in self.syn_invocation:  ## setting up the invocation table.
-                    invo_flag = 1
-                    symbol_address = inst.address
-                if invo_flag == 1 and inst.id == X86_INS_CALL:
-                    invo_flag = 0
-                    self.invo_call_jmp_table[inst.address] =  self.syn_invocation[symbol_address]
                     
                 if inst.address in self.symbol and self.symbol[inst.address] == "custom_acquire_stack":  ## try to catch the movabs which is in the acquire_stack function to set rsp.
                     stack_flag = 1
-                if stack_flag == 1 and inst.id == X86_INS_JMP:
-                     self.invo_call_jmp_table[inst.address] =  self.syn_invocation[symbol_address]
+                     
                 if stack_flag == 1 and inst.id == X86_INS_MOVABS:
                     stack_flag = 0
-                    tempstack =0
+                    tempstack = 0
                     for i in inst.operands:
                         if i.type == X86_OP_IMM:
                             tempstack = i.imm
@@ -104,6 +94,31 @@ class disassembler:
                             log(symbol.name)
                             self.syn_invocation[symbol['st_value']] = self.symbol_address["__cosrt_c_cosrtdefault"]
                             
+    def disasmcalljmp(self):  ## I hardcode a lot of jump call address here for execution and function pointer. 
+        invo_flag = 0
+        symbol_address = 0
+        print("syn_invocation")
+        print(self.syn_invocation) 
+        with open(self.path, 'rb') as f:
+            elf = ELFFile(f)
+            code = elf.get_section_by_name('.text')
+            ops = code.data()
+            addr = code['sh_addr']
+            md = Cs(CS_ARCH_X86, CS_MODE_64)
+            md.detail = True
+            
+            ## TODO : it is not working for booter.
+            '''    
+            for inst in md.disasm(ops, addr): ## decode the call and jmp address here.
+                if inst.id == X86_INS_CALL or inst.id == X86_INS_JMP or inst.id == X86_INS_JE or inst.id == X86_INS_JLE or inst.id == X86_INS_JGE or inst.id == X86_INS_JG or inst.id == X86_INS_JNE:
+                    if i.type != X86_OP_IMM and len(inst.operands) == 1: ## check it is not function pointer and hardcode the call/jmp table.
+                        self.invo_call_jmp_table[inst.address] = int(inst.op_str, 0)
+            '''
+        print("invo_call_jmp_table")
+        print(self.invo_call_jmp_table.keys())
+        print(self.invo_call_jmp_table)
+    
+              
     def sym_analyzer(self):
         sym_info = {}
         with open(self.path, 'rb') as f:
@@ -182,6 +197,9 @@ class parser:
             self.execute.exe(self.inst[self.register.reg["pc"]], self.edge, vertexfrom)
             self.register.updatestackreg()
             #### fetch next instruction pc
+            print("fdsafds")
+            print(address_list[self.index])
+            print(self.invo_call_jmp_table)
             if address_list[self.index] in self.invo_call_jmp_table:  ### hardcode the call/jmp table, we jmp to target address.
                 self.retcallpc.append(address_list[self.index + 1])
                 self.edge.add((hex(address_list[self.index]), hex(self.invo_call_jmp_table[address_list[self.index]])))
@@ -266,6 +284,10 @@ if __name__ == '__main__':
     disassembler.disasmsymbol()
     disassembler.disasminvocation()
     disassembler.disasminst()
+    disassembler.disasmcalljmp()
+    
+    exit()
+    
     
     disassembler.sym_analyzer()
     log("program entry:"+ str(disassembler.entry_pc))

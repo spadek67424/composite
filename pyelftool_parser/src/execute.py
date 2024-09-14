@@ -210,6 +210,17 @@ class execute:
                     self.reg["pc"] = int(dst, 0)
                     self.reg["pc"]
                     edge.add((hex(vertexfrom), dst))  ## graph
+            elif inst.id == (X86_INS_JNE): ## Not yet implement the simulator
+                self.reg["call_or_jmp"] = 1
+                if (not flagimm):
+                    logerror("here is dynamic that we do not handle.")
+                    logerror(hex(inst.address), inst.mnemonic, inst.op_str)
+                else:
+                    logcall(hex(inst.address), inst.mnemonic, inst.op_str)
+                    logcall("here is an static jump")
+                    self.reg["pc"] = int(dst, 0)
+                    self.reg["pc"]
+                    edge.add((hex(vertexfrom), dst))  ## graph
             else:
                 loginst(hex(inst.address), inst.mnemonic, inst.op_str)
                 loginst("This instruction is not yet handled in simulator mode which is not rsp instruction.")

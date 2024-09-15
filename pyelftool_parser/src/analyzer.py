@@ -2,6 +2,8 @@ import sys
 import register
 import execute
 import math
+import os
+import re
 from debug import loginst, log, logresult, logstack, logrust
 from capstone.x86 import *
 from elftools.elf.elffile import ELFFile
@@ -19,9 +21,35 @@ class disassembler:
         self.invo_call_jmp_table =dict()   ## hardcode the invocation call/jmp address for fetching pc 
         self.vertex = dict()            ## construct the calling graph
         self.entry_function = entry_function
+        self.entry_function_list = list()    ## need to put the cosrt_s into it.
         self.entry_pc = 0
         self.exit_pc = 0
+        self.invocation_function = list() ## record the invocation function here.
         self.acquire_stack_size = 0
+    def disasmstubs(self, file_path):
+        stub_pattern = re.compile(r'cos_asm_stub\((\w+)\)')
+        stub_indirect_pattern = re.compile(r'cos_asm_stub_indirect\((\w+)\)')
+        stubs = []
+        stub_indirects = []
+
+        # Open and read the file
+        with open(file_path, 'r') as file:
+            content = file.read()
+
+            # Find all cos_asm_stub matches
+            stubs = stub_pattern.findall(content)
+
+            # Find all cos_asm_stub_indirect matches
+            stub_indirects = stub_indirect_pattern.findall(content)
+
+        # Output the results
+        log("cos_asm_stub functions:")
+        for stub in stubs:
+            self.invocation_function.append(stub)
+
+        log("\ncos_asm_stub_indirect functions:")
+        for stub_indirect in stub_indirects:
+            self.invocation_function.append(stub_indirect)
 
     def disasminst(self):  ## decode the inst for execute
         pc_flag = 0
@@ -74,26 +102,30 @@ class disassembler:
                         log(hex(self.entry_pc))
                     if(symbol.name == 'custom_acquire_stack'):
                         self.acquire_stack_address = symbol['st_value']
-                        
-    def disasminvocation(self):
+    
+    def disasminvocation(self):  ## change the cosrt_extern to cosrt_c_;
         with open(self.path, 'rb') as f:
             e = ELFFile(f)
             symbol_tables = [ s for s in e.iter_sections()
                          if isinstance(s, SymbolTableSection)]
             for section in symbol_tables:
                 for symbol in section.iter_symbols():
+                    
+                    if "__cosrt_s" in symbol.name:
+                        if symbol.name.remove("__cosrt_s_", "") in self.invocation_function:
+                            self.entry_function_list.append(symbol.name)
+                    
                     if "__cosrt_extern" in symbol.name:
-                        log("HIHI")
-                        log(symbol.name.replace("__cosrt_extern", "__cosrt_c"))
-                        if symbol.name.replace("__cosrt_extern", "__cosrt_c") in self.symbol.keys():   ## check is their mapping __cosrt_extern_* to __cosrt_c_* invocation
-                            log("invocation1")
-                            self.syn_invocation[symbol['st_value']] =  self.symbol_address[symbol.name.replace("__cosrt_extern", "__cosrt_c")]
-                            log(self.syn_invocation[symbol.name])
-                        else:
-                            log("invocation2")
-                            log(symbol.name)
-                            self.syn_invocation[symbol['st_value']] = self.symbol_address["__cosrt_c_cosrtdefault"]
-                            
+                        if symbol.name.remove("__cosrt_extern_", "") in self.invocation_function:
+                            if symbol.name.replace("__cosrt_extern", "__cosrt_c") in self.symbol.keys():   ## check is their mapping __cosrt_extern_* to __cosrt_c_* invocation
+                                log("invocation1")
+                                self.syn_invocation[symbol['st_value']] =  self.symbol_address[symbol.name.replace("__cosrt_extern", "__cosrt_c")]
+                                log(self.syn_invocation[symbol.name])
+                            else:
+                                log("invocation2")
+                                log(symbol.name)
+                                self.syn_invocation[symbol['st_value']] = self.symbol_address["__cosrt_c_cosrtdefault"]
+                                                  
     def disasmcalljmp(self):  ## I hardcode a lot of jump call address here for execution and function pointer. 
         
         # print("syn_invocation")
@@ -106,6 +138,8 @@ class disassembler:
             md = Cs(CS_ARCH_X86, CS_MODE_64)
             md.detail = True
             flagimm = 0
+            
+            
             ## TODO : it is not working for booter.
             for inst in md.disasm(ops, addr): ## decode the call and jmp address here.
                 # print(hex(inst.address))
@@ -115,10 +149,9 @@ class disassembler:
                             flagimm = 1
                     if flagimm == 1:            ## build up the static call/jmp table
                         self.invo_call_jmp_table[inst.address] = int(inst.op_str, 0)
-                    if flagimm == 0:
-                        print(hex(inst.address))
+                    if flagimm == 0:            ## synchronization invocation call would be here, @@@@ WARNING booter has problem.
+                        pass
                     flagimm = 0
-
                 
 
 
@@ -285,11 +318,19 @@ if __name__ == '__main__':
         path = sys.argv[1]
     else:
         path = "../../system_binaries/cos_build-test/global.ping/tests.unit_pingpong.global.ping"
+    if path.split(".")[-1] == "ping":
+        stub_path = "../../src/components/interface/" + "pong" + "/stubs/stubs.S"
+    else:
+        stub_path = "../../src/components/interface/" + path.split(".")[-1] + "/stubs/stubs.S"
+    assert(os.path.exists(stub_path))
     
-        
+    
+    
+    
     disassembler = disassembler(path, entry_function)
+    disassembler.disasmstubs(stub_path)
     disassembler.disasmsymbol()
-    disassembler.disasminvocation()
+    disassembler.disasminvocation()  ##TODO @minghwu we also need to consider the cosrt_s_ from here as entry point.
     disassembler.disasminst()
     disassembler.disasmcalljmp()
     

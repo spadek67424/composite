@@ -112,13 +112,12 @@ class disassembler:
                          if isinstance(s, SymbolTableSection)]
             for section in symbol_tables:
                 for symbol in section.iter_symbols():
-                    
                     if "__cosrt_s" in symbol.name:
-                        if symbol.name.remove("__cosrt_s_", "") in self.invocation_function:
+                        if symbol.name.replace("__cosrt_s_", "") in self.invocation_function:
                             self.entry_function_list.append(symbol.name)
                     
                     if "__cosrt_extern" in symbol.name:
-                        if symbol.name.remove("__cosrt_extern_", "") in self.invocation_function:
+                        if symbol.name.replace("__cosrt_extern_", "") in self.invocation_function:
                             if symbol.name.replace("__cosrt_extern", "__cosrt_c") in self.symbol.keys():   ## check is their mapping __cosrt_extern_* to __cosrt_c_* invocation
                                 log("invocation1")
                                 self.syn_invocation[symbol['st_value']] =  self.symbol_address[symbol.name.replace("__cosrt_extern", "__cosrt_c")]
@@ -235,9 +234,6 @@ class parser:
             self.execute.exe(self.inst[self.register.reg["pc"]], self.edge, vertexfrom)
             self.register.updatestackreg()
             #### fetch next instruction pc
-            print("fdsafds")
-            print(address_list[self.index])
-            print(self.invo_jmp_table)
             if address_list[self.index] in self.invo_jmp_table:  ### hardcode the call/jmp table, we jmp to target address.
                 self.retcallpc.append(address_list[self.index + 1])
                 self.edge.add((hex(address_list[self.index]), hex(self.invo_jmp_table[address_list[self.index]])))
@@ -269,7 +265,7 @@ class parser:
                         self.index = self.index + 1
                     self.register.reg["invo"] = 0 ## clean the invo reg.
             ####
-            print(self.index)
+
             self.register.reg["pc"] = address_list[self.index] ## Setting the pc from index.
             
         self.stacklist.append(self.register.reg["stack"])
@@ -321,19 +317,17 @@ if __name__ == '__main__':
         stub_path = "../../src/components/interface/" + "pong" + "/stubs/stubs.S"
     else:
         stub_path = "../../src/components/interface/" + path.split(".")[-1] + "/stubs/stubs.S"
-    assert(os.path.exists(stub_path))
     
     
     
     
     disassembler = disassembler(path, entry_function)
-    disassembler.disasmstubs(stub_path)
+    if os.path.exists(stub_path):
+        disassembler.disasmstubs(stub_path)
     disassembler.disasmsymbol()
     disassembler.disasminvocation()  ##TODO @minghwu we also need to consider the cosrt_s_ from here as entry point.
     disassembler.disasminst()
     disassembler.disasmcalljmp()
-    
-    exit()
     
     
     disassembler.sym_analyzer()
@@ -354,6 +348,7 @@ if __name__ == '__main__':
     
     driver(parser)
     
+    '''
     logresult(parser.stackfunction)
     i = 0
     for j in parser.stackfunction:
@@ -366,6 +361,7 @@ if __name__ == '__main__':
         logresult(i)
         logresult(j)
         i = i + 1
+    '''
     logresult(parser.edge)
     
     stacksize = min(parser.stacklist)

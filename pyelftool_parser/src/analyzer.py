@@ -237,11 +237,11 @@ class parser:
             #### fetch next instruction pc
             print("fdsafds")
             print(address_list[self.index])
-            print(self.invo_call_jmp_table)
-            if address_list[self.index] in self.invo_call_jmp_table:  ### hardcode the call/jmp table, we jmp to target address.
+            print(self.invo_jmp_table)
+            if address_list[self.index] in self.invo_jmp_table:  ### hardcode the call/jmp table, we jmp to target address.
                 self.retcallpc.append(address_list[self.index + 1])
-                self.edge.add((hex(address_list[self.index]), hex(self.invo_call_jmp_table[address_list[self.index]])))
-                self.index = address_list.index(self.invo_call_jmp_table[address_list[self.index]])
+                self.edge.add((hex(address_list[self.index]), hex(self.invo_jmp_table[address_list[self.index]])))
+                self.index = address_list.index(self.invo_jmp_table[address_list[self.index]])
                 self.register.reg["rsp"] -= 8 ## because the invocation call.
             elif (self.register.reg["invo"] == 0 and self.index == address_list.index(self.register.reg["pc"])):  ## fetch next instruction
                 if self.inst[self.register.reg["pc"]].id == (X86_INS_RET): ## ret instruction, go to return address.

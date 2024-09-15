@@ -4,7 +4,7 @@ import execute
 import math
 import os
 import re
-from debug import loginst, log, logresult, logstack, logrust
+from debug import loginst, log, logresult, logstack, logrust, logerror
 from capstone.x86 import *
 from elftools.elf.elffile import ELFFile
 from capstone import *
@@ -18,7 +18,9 @@ class disassembler:
         self.symbol = dict()            ## mapping address to symbol
         self.symbol_address = dict()    ## mapping symbol to address
         self.syn_invocation = dict()    ## mapping the synchronization symbol address to target function
-        self.invo_call_jmp_table =dict()   ## hardcode the invocation call/jmp address for fetching pc 
+        self.invo_jmp_table =dict()   ## hardcode the invocation address for fetching pc 
+        self.call_jmp_table =dict()   ## hardcode the call/jmp for fetching pc 
+        
         self.vertex = dict()            ## construct the calling graph
         self.entry_function = entry_function
         self.entry_function_list = list()    ## need to put the cosrt_s into it.
@@ -139,24 +141,19 @@ class disassembler:
             md.detail = True
             flagimm = 0
             
-            
-            ## TODO : it is not working for booter.
             for inst in md.disasm(ops, addr): ## decode the call and jmp address here.
-                # print(hex(inst.address))
-                if len(inst.operands) == 1 and (inst.id == X86_INS_CALL or inst.id == X86_INS_JMP or inst.id == X86_INS_JE or inst.id == X86_INS_JLE or inst.id == X86_INS_JGE or inst.id == X86_INS_JG or inst.id == X86_INS_JNE): ## check it is not function pointer and hardcode the call/jmp table.
+                if inst.address in self.syn_invocation:
+                    self.invo_jmp_table[inst.address] = self.syn_invocation[inst.address]
+                elif len(inst.operands) == 1 and (inst.id == X86_INS_CALL or inst.id == X86_INS_JMP or inst.id == X86_INS_JE or inst.id == X86_INS_JLE or inst.id == X86_INS_JGE or inst.id == X86_INS_JG or inst.id == X86_INS_JNE): ## check it is not function pointer and hardcode the call/jmp table.
                     for i in inst.operands:
                         if i.type == X86_OP_IMM: ## check it is not function pointer.
                             flagimm = 1
                     if flagimm == 1:            ## build up the static call/jmp table
-                        self.invo_call_jmp_table[inst.address] = int(inst.op_str, 0)
+                        self.call_jmp_table[inst.address] = int(inst.op_str, 0)
                     if flagimm == 0:            ## synchronization invocation call would be here, @@@@ WARNING booter has problem.
-                        pass
+                        logerror("dynamic address or function pointer.")
                     flagimm = 0
-                
 
-
-        ## print("invo_call_jmp_table")
-        ## print(self.invo_call_jmp_table)
     
               
     def sym_analyzer(self):
@@ -195,14 +192,15 @@ class disassembler:
                 )
     
 class parser:
-    def __init__(self, symbol, inst, register, execute, exit_pc, acquire_stack_address, invo_call_jmp_table):
+    def __init__(self, symbol, inst, register, execute, exit_pc, acquire_stack_address, invo_jmp_table, call_jmp_table):
         self.symbol = symbol 
         self.inst = inst
         self.stacklist = []
         self.stackfunction = []
         self.register = register
         self.execute = execute
-        self.invo_call_jmp_table = invo_call_jmp_table
+        self.invo_jmp_table = invo_jmp_table
+        self.call_jmp_table = call_jmp_table
         self.edge = set()
         self.vertex = set()
         self.index = 0
@@ -244,6 +242,7 @@ class parser:
                 self.retcallpc.append(address_list[self.index + 1])
                 self.edge.add((hex(address_list[self.index]), hex(self.invo_call_jmp_table[address_list[self.index]])))
                 self.index = address_list.index(self.invo_call_jmp_table[address_list[self.index]])
+                self.register.reg["rsp"] -= 8 ## because the invocation call.
             elif (self.register.reg["invo"] == 0 and self.index == address_list.index(self.register.reg["pc"])):  ## fetch next instruction
                 if self.inst[self.register.reg["pc"]].id == (X86_INS_RET): ## ret instruction, go to return address.
                     self.index = address_list.index(self.retcallpc.pop()) if len(self.retcallpc) > 0 else self.index + 1
@@ -350,7 +349,8 @@ if __name__ == '__main__':
                     execute, 
                     disassembler.exit_pc, 
                     disassembler.acquire_stack_address,
-                    disassembler.invo_call_jmp_table)
+                    disassembler.invo_jmp_table,
+                    disassembler.call_jmp_table)
     
     driver(parser)
     

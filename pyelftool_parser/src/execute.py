@@ -41,6 +41,7 @@ class execute:
                 src = inst.op_str.split(",")[1].replace(" ","")
                 dst = inst.op_str.split(",")[0]
         elif len(inst.operands) == 1:
+            print(inst)
             dst = inst.op_str
         for i in inst.operands:
             if i.type == X86_OP_REG:
@@ -105,6 +106,7 @@ class execute:
                 else:
                     logcall(hex(inst.address), inst.mnemonic, inst.op_str)
                     logcall("here is an static call") 
+                    logcall(inst.op_str)
                     self.reg["pc"] = int(dst, 0)  ## hex to int
                     edge.add((hex(vertexfrom), hex(imm)))  ## graph
             elif inst.id == (X86_INS_RET):  ## catch RET instruction

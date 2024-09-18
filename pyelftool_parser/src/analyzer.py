@@ -58,6 +58,12 @@ class disassembler:
         stack_flag = 0
         custom_acquire_stack_jmp_flag = 0
         custom_acquire_stack_jmp_address = 0
+        cos_upcall_fn_end = 0
+        cos_upcall_fn_return_address = 0
+        cos_upcall_fn_flag = 0
+        cosrt_upcall_entry = 0
+        cosrt_upcall_entry_call = 0
+        
         with open(self.path, 'rb') as f:
             elf = ELFFile(f)
             code = elf.get_section_by_name('.text')
@@ -69,11 +75,17 @@ class disassembler:
                 self.inst[inst.address] = (inst)
                 if (inst.address in self.symbol):  ## it is to catch the next symbol start. @minghwu: I think it could have a better way to do this.
                     pc_flag = 0
+                    cos_upcall_fn_flag = 0
+                    cos_upcall_entry = 0
+                    cosrt_upcall_entry_call = 0
+                    
                 if (inst.address == self.entry_pc): ## when it is entry point, set the flag = 1 to catch exitpoint.
                     pc_flag = 1
                 if (pc_flag == 1):               ## catch the point until the next symbol, means it is exit point.
                     self.exit_pc = inst.address
-                    
+                
+                
+                
                 if inst.address in self.symbol and self.symbol[inst.address] == "custom_acquire_stack":  ## try to catch the movabs which is in the acquire_stack function to set rsp.
                     stack_flag = 1
                     custom_acquire_stack_jmp_flag = 1
@@ -88,7 +100,7 @@ class disassembler:
                             imm = i.imm
                     if imm in self.symbol and self.symbol[imm] == "custom_acquire_stack":
                         self.call_jmp_table[custom_acquire_stack_jmp_address] = (inst).address + 5
-                
+                        
                 if stack_flag == 1 and inst.id == X86_INS_MOVABS:
                     stack_flag = 0
                     tempstack = 0
@@ -99,8 +111,28 @@ class disassembler:
                     log("stack_size_begin")
                     log(self.acquire_stack_size)
                 
-                log(f'0x{inst.address:x}:\t{inst.mnemonic}\t{inst.op_str}')
+                ## hardcode the cosrt_upcall_fn to return since it is thread, would not return.
+                if inst.address in self.symbol and self.symbol[inst.address] == "cos_upcall_fn":
+                    cos_upcall_fn_flag = 1
+                    print(hex(inst.address))
+                
+                if cos_upcall_fn_flag == 1:   ## catch the last instruction of cos_upcall_fn
+                    cos_upcall_fn_end = inst.address  
+                ########
+                if inst.address in self.symbol and self.symbol[inst.address] == "__cosrt_upcall_entry":
+                    cosrt_upcall_entry = 1
+                
+                if cosrt_upcall_entry == 1 and inst.id == X86_INS_ADD:
+                    cos_upcall_fn_return_address = inst.address
+                    cosrt_upcall_entry = 0
 
+                    
+                #######
+                log(f'0x{inst.address:x}:\t{inst.mnemonic}\t{inst.op_str}')
+            print("testbug")
+            print(cos_upcall_fn_end)
+            print(cos_upcall_fn_return_address)
+            self.call_jmp_table[cos_upcall_fn_end] = cos_upcall_fn_return_address
     def disasmsymbol(self):
         with open(self.path, 'rb') as f:
             e = ELFFile(f)
@@ -253,7 +285,7 @@ class parser:
                 self.edge.add((hex(address_list[self.index]), hex(self.invo_jmp_table[address_list[self.index]])))
                 self.index = address_list.index(self.invo_jmp_table[address_list[self.index]])
                 self.register.reg["rsp"] -= 8 ## because the invocation call.
-                log("fastpace with hardcode jmp/call table.")
+                print("fastpace with hardcode invocation table.")
                 self.register.reg["call_or_jmp"] = 0 ## clean the call/jmp reg. 
             elif (self.register.reg["call_or_jmp"] == 0 and self.index == address_list.index(self.register.reg["pc"])):  ## fetch next instruction
                 if self.inst[self.register.reg["pc"]].id == (X86_INS_RET): ## ret instruction, go to return address.
@@ -268,20 +300,33 @@ class parser:
                     logresult("pc6")
                 logresult("pc2")
             else:     ## handle the call and jmp instruction
-                if self.inst[address_list[self.index]].id == (X86_INS_CALL): ## if this is call, append the return address to stack.
+                ##fast pace
+                if self.inst[address_list[self.index]].address in self.call_jmp_table and self.inst[address_list[self.index]].address not in self.seenlist:
+                    self.edge.add((hex(self.inst[address_list[self.index]].address), hex(self.call_jmp_table[address_list[self.index]])))
+                    self.seenlist.append(self.inst[address_list[self.index]].address)
+                    if self.inst[address_list[self.index]].id == X86_INS_CALL:
+                        self.retcallpc.append(address_list[self.index + 1])
+                    else: ## maybe here we should catch the jmp return.
+                        pass
+                    self.index = address_list.index(self.call_jmp_table[address_list[self.index]])
+                    print("fastpace with hardcode call/jmp table.")
+                    self.register.reg["call_or_jmp"] = 0
+                elif self.inst[address_list[self.index]].id == (X86_INS_CALL): ## if this is call, append the return address to stack.
                     self.retcallpc.append(address_list[self.index + 1])
                     if self.register.reg["call_or_jmp"] == 1:  ## handle unknown function pointer.
                         logerror("Here is dynamic")
                         logerror(self.inst[address_list[self.index]].address, self.inst[address_list[self.index]].mnemonic, self.inst[address_list[self.index]].op_str)
-                        self.index = self.index + 1
+                        self.index = self.index + 1   
                     elif self.register.reg["pc"] not in self.seenlist:
+                        print("debug")
                         self.index = address_list.index(self.register.reg["pc"])
                         self.seenlist.append(self.register.reg["pc"])
                     else:
+                        print("debug2")
                         self.index = self.index + 1
                     self.register.reg["call_or_jmp"] = 0 ## clean the invo reg.        
                 else:  ## handle jmp inst 
-                    if self.register.reg["pc"] in self.call_jmp_table:
+                    if self.register.reg["pc"] in self.call_jmp_table and self.register.reg["pc"] not in self.seenlist:
                         self.edge.add((hex(self.register.reg["pc"]), hex(self.call_jmp_table[address_list[self.index]])))
                         self.index = address_list.index(self.call_jmp_table[address_list[self.index]])
                         self.seenlist.append(self.register.reg["pc"])
@@ -361,7 +406,11 @@ if __name__ == '__main__':
     disassembler.disasminvocation()  ##TODO @minghwu we also need to consider the cosrt_s_ from here as entry point.
     disassembler.disasminst()
     disassembler.disasmcalljmp()
+    ### hardcode a call inst because I think capstone has bugs for decode this one.
+    #if path.split(".")[-1] == "booter":
+    #    disassembler.call_jmp_table[4205439] = 4256464
     
+    ######
     
     disassembler.sym_analyzer()
     log("program entry:"+ str(disassembler.entry_pc))

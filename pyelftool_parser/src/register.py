@@ -35,8 +35,7 @@ class register:
         self.reg["xmm7"] = 0
         self.reg["enter"] = 0
         self.reg["stack"] = 0
-        self.reg["invo"] = 0 ## spectial reg for check synchronization invocation.
-        self.reg["call_or_jmp"] = 0 ## spectial reg for check synchronization invocation.
+        self.reg["call_or_jmp"] = 0 ## spectial reg for fucntion pointer.
     def clean(self):
         self.reg["rax"] = 0
         self.reg["rbx"] = 0
@@ -66,8 +65,6 @@ class register:
         self.reg["stack"] = 0
     def cleancalljmp(self):
         self.reg["call_or_jmp"] = 0
-    def cleaninvocation(self):
-        self.reg["invo"] = 0
     def resetrsp(self):
         self.reg["rspbegin"] = self.stacksizeinit
         self.reg["rsp"] = self.stacksizeinit

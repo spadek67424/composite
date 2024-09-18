@@ -87,12 +87,7 @@ class disassembler:
                         if i.type == X86_OP_IMM:
                             imm = i.imm
                     if imm in self.symbol and self.symbol[imm] == "custom_acquire_stack":
-                        print("test")
-                        print(custom_acquire_stack_jmp_address)
                         self.call_jmp_table[custom_acquire_stack_jmp_address] = (inst).address + 5
-                        print((inst).address + 5)
-                        
-                    
                 
                 if stack_flag == 1 and inst.id == X86_INS_MOVABS:
                     stack_flag = 0
@@ -279,23 +274,27 @@ class parser:
                         logerror("Here is dynamic")
                         logerror(self.inst[address_list[self.index]].address, self.inst[address_list[self.index]].mnemonic, self.inst[address_list[self.index]].op_str)
                         self.index = self.index + 1
-                        print("error")
-                    else:
-                        print("error")
+                    elif self.register.reg["pc"] not in self.seenlist:
                         self.index = address_list.index(self.register.reg["pc"])
+                        self.seenlist.append(self.register.reg["pc"])
+                    else:
+                        self.index = self.index + 1
                     self.register.reg["call_or_jmp"] = 0 ## clean the invo reg.        
                 else:  ## handle jmp inst 
                     if self.register.reg["pc"] in self.call_jmp_table:
                         self.edge.add((hex(self.register.reg["pc"]), hex(self.call_jmp_table[address_list[self.index]])))
                         self.index = address_list.index(self.call_jmp_table[address_list[self.index]])
                         self.seenlist.append(self.register.reg["pc"])
+                        logresult("pc8")
                     elif self.register.reg["pc"] not in self.seenlist: ## handle the while loop of jmp.
                         self.index = address_list.index(self.register.reg["pc"])
                         self.seenlist.append(self.register.reg["pc"])
-                    else:  ## unknown function pointer
+                        logresult("pc9")
+                    else:  ## unknown function pointer or already seen
                         self.index = self.index + 1
                         logerror("Here is dynamic")
                         logerror(self.inst[address_list[self.index]].address, self.inst[address_list[self.index]].mnemonic, self.inst[address_list[self.index]].op_str)
+                        logresult("pc10")
                     self.register.reg["call_or_jmp"] = 0 ## clean the call/jmp reg.
                 
             ####

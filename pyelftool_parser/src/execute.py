@@ -45,7 +45,6 @@ class execute:
                 src = inst.op_str.split(",")[1].replace(" ","")
                 dst = inst.op_str.split(",")[0]
         elif len(inst.operands) == 1:
-            print(inst)
             dst = inst.op_str
         for i in inst.operands:
             if i.type == X86_OP_REG:

@@ -339,13 +339,6 @@ def cleanresult(parser): ## remove the custom_acquire_stack function from the re
             del parser.stacklist[index]
             return
         index = index + 1
-    
-    
-def driver(parser):
-    
-    parser.stack_analyzer()
-    
-    return parser.stacklist
 
 def PowerOf2(N):
     # Calculate log2 of N
@@ -356,6 +349,42 @@ def PowerOf2(N):
         return a
     
     return a + 1
+
+class driver:
+    def __init__(self, path, entry_function, stub_path) -> None:
+        self.disassembler = disassembler(path, entry_function)
+        if os.path.exists(stub_path):
+            self.disassembler.disasmstubs(stub_path)
+        self.disassembler.disasmsymbol()
+        self.disassembler.disasminvocation()  ##TODO @minghwu we also need to consider the cosrt_s_ from here as entry point.
+        self.disassembler.disasminst()
+        self.disassembler.disasmcalljmp()
+
+        self.disassembler.sym_analyzer()
+        log("program entry:"+ str(self.disassembler.entry_pc))
+        log("program exit:"+ str(self.disassembler.exit_pc))
+        log("program stacksize"+ str(self.disassembler.acquire_stack_size))
+        self.register = register.register(self.disassembler.acquire_stack_size)
+        self.register.reg["pc"] = self.disassembler.entry_pc
+        self.execute = execute.execute(self.register)
+        self.parser = parser(self.disassembler.symbol, 
+                        self.disassembler.inst, 
+                        self.register,
+                        self.execute,
+                        self.disassembler.entry_pc,
+                        self.disassembler.exit_pc, 
+                        self.disassembler.acquire_stack_address,
+                        self.disassembler.invo_jmp_table,
+                        self.disassembler.call_jmp_table)
+    def run(self):
+        self.parser.stack_analyzer()
+
+        logresult(self.parser.stackfunction)
+        logresult(self.parser.edge)
+
+        stacksize = min(self.parser.stacklist)
+        logresult(stacksize)
+        logrust(PowerOf2(abs(stacksize)))
 
 if __name__ == '__main__':
     
@@ -377,7 +406,9 @@ if __name__ == '__main__':
     
     
     
-    
+    driver = driver(path, entry_function, stub_path)
+    driver.run()
+    '''
     disassembler = disassembler(path, entry_function)
     if os.path.exists(stub_path):
         disassembler.disasmstubs(stub_path)
@@ -403,8 +434,7 @@ if __name__ == '__main__':
                     disassembler.invo_jmp_table,
                     disassembler.call_jmp_table)
     
-    driver(parser)
-    
+    parser.stack_analyzer()
     
     logresult(parser.stackfunction)
     i = 0
@@ -424,5 +454,5 @@ if __name__ == '__main__':
     stacksize = min(parser.stacklist)
     logresult(stacksize)
     logrust(PowerOf2(abs(stacksize)))
-    
+    '''
     

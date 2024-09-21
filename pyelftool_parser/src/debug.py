@@ -16,6 +16,7 @@ def logresult(*argv):
         print(argv)
 def logcall(*argv):
     if DEBUGcall:
+        print("hey call")
         print(argv)
 def logerror(*argv):
     if DEBUGerror:

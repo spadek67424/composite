@@ -1,11 +1,12 @@
 from debug import log, logstack
 class register:
-    def __init__(self):
+    def __init__(self, stacksizeinit):
         self.reglist = ["rax", "rbx", "rcx", "rdx", "rdi", "rsi", "rbp", "rsp", 
                         "r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15", 
                         "eax", "ebx", "ecx", "edx", "edi", "esi", "ebp", "esp",
                         "xmm0", "xmm1", "xmm2", "xmm3", "xmm4", "xmm5", "xmm6", "xmm7"]
         self.reg = dict()
+        self.stacksizeinit = stacksizeinit
         self.reg["pc"] = 0
         self.reg["rax"] = 0
         self.reg["rbx"] = 0
@@ -14,8 +15,8 @@ class register:
         self.reg["rdi"] = 0
         self.reg["rsi"] = 0
         self.reg["rbp"] = 0
-        self.reg["rspbegin"] = 0
-        self.reg["rsp"] = 0
+        self.reg["rspbegin"] = stacksizeinit
+        self.reg["rsp"] = stacksizeinit
         self.reg["r8"] = 0
         self.reg["r9"] = 0
         self.reg["r10"] = 0
@@ -34,6 +35,7 @@ class register:
         self.reg["xmm7"] = 0
         self.reg["enter"] = 0
         self.reg["stack"] = 0
+        self.reg["call_or_jmp"] = 0 ## spectial reg for fucntion pointer.
     def clean(self):
         self.reg["rax"] = 0
         self.reg["rbx"] = 0
@@ -42,8 +44,6 @@ class register:
         self.reg["rdi"] = 0 
         self.reg["rsi"] = 0
         self.reg["rbp"] = 0
-        self.reg["rspbegin"] = self.reg["rsp"]
-        ##　self.reg["rsp"] = 0
         self.reg["r8"] = 0
         self.reg["r9"] = 0
         self.reg["r10"] = 0
@@ -61,7 +61,13 @@ class register:
         self.reg["xmm6"] = 0
         self.reg["xmm7"] = 0
         self.reg["enter"] = 0
+    def cleanstack(self):
         self.reg["stack"] = 0
+    def cleancalljmp(self):
+        self.reg["call_or_jmp"] = 0
+    def resetrsp(self):
+        self.reg["rspbegin"] = self.stacksizeinit
+        self.reg["rsp"] = self.stacksizeinit
     def Isreg(self, s):
         if s in self.reglist:
             return True
@@ -130,9 +136,9 @@ class register:
     def updaterip(self, key):
         if key != -1:
             self.reg["rip"] = key
-    def updatestackreg(self, acquire_stack_flag):
+    def updatestackreg(self):
         logstack("comparison:")
         logstack(self.reg["rsp"])
         logstack(self.reg["rspbegin"])
-        self.reg["stack"] =  self.reg["rsp"] - self.reg["rspbegin"]  ## catch the maximum stack, but I use min because stack is negative.
+        self.reg["stack"] =  min(self.reg["stack"], self.reg["rsp"] - self.reg["rspbegin"])  ## catch the maximum stack, but I use min because stack is negative.
         logstack(self.reg["stack"])

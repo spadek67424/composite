@@ -316,25 +316,7 @@ class parser:
         self.stacklist = self.stacklist[1:]
         return (self.stackfunction,self.stacklist)
     
-def cleanresult(parser): ## remove the custom_acquire_stack function from the result.
-    index = 0
-    
-    for i in parser.stackfunction:
-        if i == "custom_acquire_stack":
-            parser.stackfunction.remove("custom_acquire_stack")
-            del parser.stacklist[index]
-            return
-        index = index + 1
 
-def PowerOf2(N):
-    # Calculate log2 of N
-    a = int(math.log2(N))
- 
-    # If 2^a is equal to N, return N
-    if 2**a == N:
-        return a
-    
-    return a + 1
 
 class driver:
     def __init__(self, path, entry_function, stub_path, basic_block_flag) -> None:
@@ -363,6 +345,16 @@ class driver:
                         self.disassembler.acquire_stack_address,
                         self.disassembler.invo_jmp_table,
                         self.disassembler.call_jmp_table)
+        
+    def PowerOf2(self, N):
+        # Calculate log2 of N
+        a = int(math.log2(N))
+    
+        # If 2^a is equal to N, return N
+        if 2**a == N:
+            return a
+        
+        return a + 1
     def run(self):
         self.parser.stack_analyzer(self.basic_block_flag)
 
@@ -385,14 +377,15 @@ class driver:
             i = i + 1
         stacksize = min(self.parser.stacklist)
         logresult(stacksize)
-        logrust(PowerOf2(abs(stacksize)))
+        
+        logrust(self.PowerOf2(abs(stacksize)))
 
 if __name__ == '__main__':
     
     ## path = "../testbench/composite/system_binaries/cos_build-test/global.sched/sched.pfprr_quantum_static.global.sched"
     ## path = "/home/minghwu/work/minghwu/composite/system_binaries/cos_build-test/global.ping/tests.unit_pingpong.global.ping"
     
-    basic_block_flag = 1  ## Is it basic block mode = 1 / stack mode = 0.
+    basic_block_flag = 0  ## Is it basic block mode = 1 / stack mode = 0.
     
     if len(sys.argv) >=3:
         entry_function = sys.argv[2]

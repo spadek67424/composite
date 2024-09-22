@@ -63,9 +63,7 @@ class register:
         self.reg["enter"] = 0
     def cleanstack(self):
         self.reg["stack"] = 0
-    def cleancalljmp(self):
-        self.reg["call_or_jmp"] = 0
-    def resetrsp(self):
+    def alignrsp(self):
         self.reg["rspbegin"] = self.stacksizeinit
         self.reg["rsp"] = self.stacksizeinit
     def Isreg(self, s):

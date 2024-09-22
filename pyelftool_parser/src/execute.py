@@ -102,16 +102,17 @@ class execute:
             elif inst.id == (X86_INS_CALL):  ## catch call instruction
                 self.reg["rsp"] -= 8
                 if (not flagimm):
-                    logcall(hex(inst.address), inst.mnemonic, inst.op_str)
+                    logerror(hex(inst.address), inst.mnemonic, inst.op_str)
                     logerror("here is dynamic that we do not handle.")
                     logerror(hex(inst.address), inst.mnemonic, inst.op_str)
-                    self.reg["call_or_jmp"] = 1
+                    
                 else:
                     logcall(hex(inst.address), inst.mnemonic, inst.op_str)
                     logcall("here is an static call") 
                     logcall(inst.op_str)
                     self.reg["pc"] = int(dst, 0)  ## hex to int
                     edge.add((hex(vertexfrom), hex(imm)))  ## graph
+                    
             elif inst.id == (X86_INS_RET):  ## catch RET instruction
                 self.reg["rsp"] += 8
                 self.retflag = 1
@@ -167,7 +168,6 @@ class execute:
                 if (not flagimm):
                     logerror("here is dynamic jmp.")
                     logerror(hex(inst.address), inst.mnemonic, inst.op_str)
-                    self.reg["call_or_jmp"] = 1
                 else:
                     logcall(hex(inst.address), inst.mnemonic, inst.op_str)
                     logcall("here is an static jmp.")
@@ -177,7 +177,6 @@ class execute:
                 if (not flagimm):
                     logerror("here is dynamic that we do not handle.")
                     logerror(hex(inst.address), inst.mnemonic, inst.op_str)
-                    self.reg["call_or_jmp"] = 1
                 else:
                     logcall(hex(inst.address), inst.mnemonic, inst.op_str)
                     logcall("here is an static jump")
@@ -187,7 +186,6 @@ class execute:
                 if (not flagimm):
                     logerror("here is dynamic that we do not handle.")
                     logerror(hex(inst.address), inst.mnemonic, inst.op_str)
-                    self.reg["call_or_jmp"] = 1
                 else:
                     logcall(hex(inst.address), inst.mnemonic, inst.op_str)
                     logcall("here is an static jump")
@@ -197,7 +195,6 @@ class execute:
                 if (not flagimm):
                     logerror("here is dynamic that we do not handle.")
                     logerror(hex(inst.address), inst.mnemonic, inst.op_str)
-                    self.reg["call_or_jmp"] = 1
                 else:
                     logcall(hex(inst.address), inst.mnemonic, inst.op_str)
                     logcall("here is an static jump")
@@ -207,7 +204,6 @@ class execute:
                 if (not flagimm):
                     logerror("here is dynamic that we do not handle.")
                     logerror(hex(inst.address), inst.mnemonic, inst.op_str)
-                    self.reg["call_or_jmp"] = 1
                 else:
                     logcall(hex(inst.address), inst.mnemonic, inst.op_str)
                     logcall("here is an static jump")
@@ -218,12 +214,10 @@ class execute:
                 if (not flagimm):
                     logerror("here is dynamic that we do not handle.")
                     logerror(hex(inst.address), inst.mnemonic, inst.op_str)
-                    self.reg["call_or_jmp"] = 1
                 else:
                     logcall(hex(inst.address), inst.mnemonic, inst.op_str)
                     logcall("here is an static jump")
                     self.reg["pc"] = int(dst, 0)
-                    self.reg["pc"]
                     edge.add((hex(vertexfrom), dst))  ## graph
             else:
                 loginst(hex(inst.address), inst.mnemonic, inst.op_str)

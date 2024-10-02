@@ -269,7 +269,7 @@ class parser:
             
             #### fetch next instruction pc
             
-            if address_list[self.index + 1] in self.symbol.keys():  ## have a virtual return address for some function does not have ret.
+            if address_list[self.index + 1] in self.symbol.keys() :  ## have a virtual return address for some function does not have ret.
                 self.execute.exe(-1, -1, -1)  ## virtual ret.
                 if self.execute.retflag == 1:
                     self.index = address_list.index(self.retcallpc.pop()) if len(self.retcallpc) > 0 else self.index + 1
@@ -281,7 +281,7 @@ class parser:
                 self.register.reg["rsp"] -= 8 ## because the invocation call.
                 self.register.reg["call_or_jmp"] = 0 ## clean the call/jmp reg. 
                 log("fastpace with hardcode invocation table.")
-            elif (self.register.reg["call_or_jmp"] == 0 and self.index == address_list.index(self.register.reg["pc"])):  ## fetch next instruction
+            elif (self.register.reg["call_or_jmp"] == 0 and self.index == address_list.index(self.register.reg["pc"])):  ## it is not jmp/call inst fetch next instruction
                 if self.inst[self.register.reg["pc"]].id == (X86_INS_RET): ## ret instruction, go to return address.
                     self.index = address_list.index(self.retcallpc.pop()) if len(self.retcallpc) > 0 else self.index + 1
                 elif address_list[self.index + 1] in self.symbol.keys() and self.retjmpflag == 1: ## Assuming the return to return address if going to the end of function.
@@ -289,12 +289,10 @@ class parser:
                     self.retjmpflag = 0
                 else:
                     self.index = self.index + 1
-            else:     ## handle the call and jmp instruction
+            else:     ## handle the call/jmp instruction
                 if self.inst[address_list[self.index]].address in self.call_jmp_table and self.inst[address_list[self.index]].address not in self.seenlist:
                     self.edge.add((hex(self.inst[address_list[self.index]].address), hex(self.call_jmp_table[address_list[self.index]])))
                     self.seenlist.append(self.inst[address_list[self.index]].address)
-                    logcall("HIHI@ PC")
-                    logcall(hex(self.inst[address_list[self.index]].address))
                     
                     if self.inst[address_list[self.index]].id == X86_INS_CALL:
                         self.retcallpc.append(address_list[self.index + 1])
@@ -302,7 +300,6 @@ class parser:
                     log("fastpace with hardcode call/jmp table.")
                     self.register.reg["call_or_jmp"] = 0
                 elif self.inst[address_list[self.index]].id == (X86_INS_CALL): ## if this is call, append the return address to stack, all dynamic function call would go here, otherwise catch by call table.
-                    logcall("checkpoint")
                     self.retcallpc.append(address_list[self.index + 1])
                     if self.register.reg["call_or_jmp"] == 1:  ## handle unknown function pointer.
                         logerror("Here is dynamic call")
@@ -311,19 +308,13 @@ class parser:
                     elif self.inst[address_list[self.index]].address not in self.seenlist:
                         self.seenlist.append(self.inst[address_list[self.index]].address)
                         self.index = address_list.index(self.register.reg["pc"])
-                        
                     else:
                         self.index = self.index + 1
                     self.register.reg["call_or_jmp"] = 0 ## clean the invo reg.        
                 else:  ## handle jmp inst  all dynamic function jmp would go here, otherwise catch by jmp table.
                     if self.inst[address_list[self.index]].address not in self.seenlist: ## handle the while loop of jmp, or seen list
                         self.seenlist.append(self.inst[address_list[self.index]].address)
-                        
                         self.index = address_list.index(self.register.reg["pc"])
-                        
-                        logcall("HIHI PC")
-                        logcall(hex(self.register.reg["pc"]))
-                        
                     else:  ## unknown function pointer or already seen
                         self.index = self.index + 1
                         logerror("Here is dynamic jmp")

@@ -18,9 +18,9 @@ class disassembler:
         self.symbol = dict()            ## mapping address to symbol
         self.symbol_address = dict()    ## mapping symbol to address
         self.syn_invocation = dict()    ## mapping the synchronization symbol address to target function
-        self.invo_jmp_table =dict()   ## hardcode the invocation address for fetching pc 
-        self.call_jmp_table =dict()   ## hardcode the call/jmp for fetching pc 
-        
+        self.invo_jmp_table = dict()   ## hardcode the invocation address for fetching pc 
+        self.call_jmp_table = dict()   ## hardcode the call/jmp for fetching pc 
+        self.slm_ipithd_create_address = 0  ## hardcode the thread function for scheduler.
         
         
         self.vertex = dict()            ## construct the calling graph
@@ -63,12 +63,9 @@ class disassembler:
         for stub_indirect in stub_indirects:
             self.invocation_function.append(stub_indirect)
 
-    def disasminstpass1(self, md, ops, addr): ## pinpoint all the needed hardcode address, also decode the insts.
+    def disasminstpass(self, md, ops, addr): ## pinpoint all the needed hardcode address, also decode the insts.
         pc_flag = 0
         stack_flag = 0
-        custom_acquire_stack_jmp_flag = 0
-        custom_acquire_stack_jmp_address = 0
-        cosrt_upcall_entry = 0
         
         for inst in md.disasm(ops, addr):
             self.inst[inst.address] = (inst)
@@ -84,19 +81,8 @@ class disassembler:
             
             if inst.address in self.symbol and self.symbol[inst.address] == "custom_acquire_stack":  ## try to catch the movabs which is in the acquire_stack function to set rsp.
                 stack_flag = 1
-                custom_acquire_stack_jmp_flag = 1
             
-            if custom_acquire_stack_jmp_flag == 1 and inst.id == X86_INS_JMP:
-                custom_acquire_stack_jmp_address = inst.address
-                custom_acquire_stack_jmp_flag = 0
-                
-            if inst.id == X86_INS_JMP and len(inst.operands) ==1:
-                for i in inst.operands:
-                    if i.type == X86_OP_IMM:
-                        imm = i.imm
-                if imm in self.symbol and self.symbol[imm] == "custom_acquire_stack":
-                    self.call_jmp_table[custom_acquire_stack_jmp_address] = (inst).address + 5
-                    
+            
             if stack_flag == 1 and inst.id == X86_INS_MOVABS:
                 stack_flag = 0
                 tempstack = 0
@@ -106,9 +92,28 @@ class disassembler:
                 self.acquire_stack_size = tempstack
                 log("stack_size_begin")
                 log(self.acquire_stack_size)
-      
-    def disasminst(self):  ## decode the inst for execute
+    
+    def disasmthreadpointer(self, md, ops, addr):
+        for inst in md.disasm(ops, addr):
+            if inst.address in self.symbol and self.symbol[inst.address] == "slm_ipithd_create": 
+                self.slm_ipithd_create_address = inst.address
         
+        flag = 0
+        for inst in md.disasm(ops, addr):
+            if inst.address in self.symbol and self.symbol[inst.address] == "cos_upcall_fn":
+                flag = 1
+            if flag == 1 and inst.id == X86_INS_CALL:
+                for i in inst.operands:
+                    if i.type == X86_OP_MEM: ## mean it is not the call instruction we want, because it is memory call.
+                        continue
+                    if i.type == X86_OP_IMM: ## mean it is not the call instruction we want, because it is IMM call.
+                        continue
+                flag = 0
+                self.call_jmp_table[inst.address] = self.slm_ipithd_create_address
+                    
+                    
+        
+    def disasminst(self):  ## decode the inst for execute
         with open(self.path, 'rb') as f:
             elf = ELFFile(f)
             code = elf.get_section_by_name('.text')
@@ -116,8 +121,8 @@ class disassembler:
             addr = code['sh_addr']
             md = Cs(CS_ARCH_X86, CS_MODE_64)
             md.detail = True
-            self.disasminstpass1(md, ops, addr)
-            
+            self.disasminstpass(md, ops, addr)  ## disasm the instruction into a list, setting up the entry/exit pc.
+            self.disasmthreadpointer(md, ops, addr) ## hardcode the dynamic thread.
     def disasmsymbol(self):
         with open(self.path, 'rb') as f:
             e = ELFFile(f)
@@ -162,6 +167,7 @@ class disassembler:
                         self.init_done_address = symbol['st_value'] 
                     if "__cosrt_extern_init_parallel_await_init":
                         self.init_parallel_await_init_address = symbol['st_value']
+    
     def disasmcalljmp(self):  ## I hardcode a lot of jump call address here for execution and function pointer. 
         with open(self.path, 'rb') as f:
             elf = ELFFile(f)

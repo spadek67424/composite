@@ -4,7 +4,7 @@ import execute
 import math
 import os
 import re
-from debug import loginst, log, logresult, logstack, logrust, logerror
+from debug import loginst, log, logresult, logstack, logrust, logerror, logcall
 from capstone.x86 import *
 from elftools.elf.elffile import ELFFile
 from capstone import *
@@ -293,31 +293,37 @@ class parser:
                 if self.inst[address_list[self.index]].address in self.call_jmp_table and self.inst[address_list[self.index]].address not in self.seenlist:
                     self.edge.add((hex(self.inst[address_list[self.index]].address), hex(self.call_jmp_table[address_list[self.index]])))
                     self.seenlist.append(self.inst[address_list[self.index]].address)
+                    logcall("HIHI@ PC")
+                    logcall(hex(self.inst[address_list[self.index]].address))
+                    
                     if self.inst[address_list[self.index]].id == X86_INS_CALL:
                         self.retcallpc.append(address_list[self.index + 1])
                     self.index = address_list.index(self.call_jmp_table[address_list[self.index]])
                     log("fastpace with hardcode call/jmp table.")
                     self.register.reg["call_or_jmp"] = 0
                 elif self.inst[address_list[self.index]].id == (X86_INS_CALL): ## if this is call, append the return address to stack, all dynamic function call would go here, otherwise catch by call table.
+                    logcall("checkpoint")
                     self.retcallpc.append(address_list[self.index + 1])
                     if self.register.reg["call_or_jmp"] == 1:  ## handle unknown function pointer.
                         logerror("Here is dynamic call")
                         logerror(self.inst[address_list[self.index]].address, self.inst[address_list[self.index]].mnemonic, self.inst[address_list[self.index]].op_str)
                         self.index = self.index + 1   
-                    elif self.register.reg["pc"] not in self.seenlist:
+                    elif self.inst[address_list[self.index]].address not in self.seenlist:
+                        self.seenlist.append(self.inst[address_list[self.index]].address)
                         self.index = address_list.index(self.register.reg["pc"])
-                        self.seenlist.append(self.register.reg["pc"])
+                        
                     else:
                         self.index = self.index + 1
                     self.register.reg["call_or_jmp"] = 0 ## clean the invo reg.        
                 else:  ## handle jmp inst  all dynamic function jmp would go here, otherwise catch by jmp table.
-                    if self.register.reg["pc"] in self.call_jmp_table and self.register.reg["pc"] not in self.seenlist:  ## I think here is useless @minghwu
-                        self.edge.add((hex(self.register.reg["pc"]), hex(self.call_jmp_table[address_list[self.index]])))
-                        self.index = address_list.index(self.call_jmp_table[address_list[self.index]])
-                        self.seenlist.append(self.register.reg["pc"])
-                    elif self.register.reg["pc"] not in self.seenlist: ## handle the while loop of jmp, or seen list
+                    if self.inst[address_list[self.index]].address not in self.seenlist: ## handle the while loop of jmp, or seen list
+                        self.seenlist.append(self.inst[address_list[self.index]].address)
+                        
                         self.index = address_list.index(self.register.reg["pc"])
-                        self.seenlist.append(self.register.reg["pc"])
+                        
+                        logcall("HIHI PC")
+                        logcall(hex(self.register.reg["pc"]))
+                        
                     else:  ## unknown function pointer or already seen
                         self.index = self.index + 1
                         logerror("Here is dynamic jmp")
@@ -389,8 +395,7 @@ class driver:
 if __name__ == '__main__':
     
     ## path = "../testbench/composite/system_binaries/cos_build-test/global.sched/sched.pfprr_quantum_static.global.sched"
-    ## path = "/home/minghwu/work/minghwu/composite/system_binaries/cos_build-test/global.ping/tests.unit_pingpong.global.ping"
-    
+    ## path = "/home/minghwu/work/minghwu/composite/system_binaries/cos_build-test/global.ping/tests.unit_pingpong.global.ping"   
     if len(sys.argv) >=3:
         entry_function = sys.argv[2]
     else:
@@ -403,8 +408,6 @@ if __name__ == '__main__':
         stub_path = "../../src/components/interface/" + "pong" + "/stubs/stubs.S"
     else:
         stub_path = "../../src/components/interface/" + path.split(".")[-1] + "/stubs/stubs.S"
-    
-    
     
     driver = driver(path, entry_function, stub_path)
     driver.run()

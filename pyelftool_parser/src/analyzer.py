@@ -229,7 +229,7 @@ class disassembler:
                 )
     
 class parser:
-    def __init__(self, symbol, inst, register, execute, entry_pc, exit_pc, acquire_stack_address, invo_jmp_table, call_jmp_table):
+    def __init__(self, symbol, inst, register, execute, entry_pc, exit_pc, acquire_stack_address, invo_jmp_table, call_jmp_table, basic_block_mode):
         self.symbol = symbol 
         self.inst = inst
         self.stacklist = []
@@ -248,6 +248,7 @@ class parser:
         self.acquire_stack_address = acquire_stack_address
         self.retcallpc = []
         self.seenlist = [] ## handle the while loop jmp.
+        self.basic_block_mode = basic_block_mode
         
     def stack_analyzer(self):
         address_list = list(self.inst.keys())  ## a list for instruction address.
@@ -262,8 +263,11 @@ class parser:
                 logstack(self.symbol[self.register.reg["pc"]])   ## TODO: here is error.
                 self.register.updatestackreg()
                 self.stacklist.append(self.register.reg["stack"])
-                self.register.cleanstack()
-                self.register.resetrsp() 
+                
+                if self.basic_block_mode == 1:
+                    self.register.cleanstack() 
+                    self.register.resetrsp() 
+                
                 ###### Graph
                 vertexfrom = self.register.reg["pc"]
                 self.vertex.add(vertexfrom)
@@ -333,28 +337,9 @@ class parser:
         self.stacklist = self.stacklist[1:]
         return (self.stackfunction,self.stacklist)
     
-def cleanresult(parser): ## remove the custom_acquire_stack function from the result.
-    index = 0
     
-    for i in parser.stackfunction:
-        if i == "custom_acquire_stack":
-            parser.stackfunction.remove("custom_acquire_stack")
-            del parser.stacklist[index]
-            return
-        index = index + 1
-
-def PowerOf2(N):
-    # Calculate log2 of N
-    a = int(math.log2(N))
- 
-    # If 2^a is equal to N, return N
-    if 2**a == N:
-        return a
-    
-    return a + 1
-
 class driver:
-    def __init__(self, path, entry_function, stub_path) -> None:
+    def __init__(self, path, entry_function, stub_path, basic_block_mode) -> None:
         self.disassembler = disassembler(path, entry_function)
         if os.path.exists(stub_path):
             self.disassembler.disasmstubs(stub_path)
@@ -378,21 +363,47 @@ class driver:
                         self.disassembler.exit_pc, 
                         self.disassembler.acquire_stack_address,
                         self.disassembler.invo_jmp_table,
-                        self.disassembler.call_jmp_table)
+                        self.disassembler.call_jmp_table,
+                        basic_block_mode)
+    def cleanresult(self): ## remove the custom_acquire_stack function from the result.
+        index = 0
+        
+        for i in self.parser.stackfunction:
+            if i == "custom_acquire_stack":
+                self.parser.stackfunction.remove("custom_acquire_stack")
+                del self.parser.stacklist[index]
+                return
+            index = index + 1
+    
+    def PowerOf2(self, N):
+        # Calculate log2 of N
+        a = int(math.log2(N))
+    
+        # If 2^a is equal to N, return N
+        if 2**a == N:
+            return a
+        
+        return a + 1
+
     def run(self):
         self.parser.stack_analyzer()
 
         logresult(self.parser.stackfunction)
+        logresult(self.parser.stacklist)
+        
         logresult(self.parser.edge)
 
         stacksize = min(self.parser.stacklist)
         logresult(stacksize)
-        logrust(PowerOf2(abs(stacksize)))
+        logrust(self.PowerOf2(abs(stacksize)))
 
 if __name__ == '__main__':
     
     ## path = "../testbench/composite/system_binaries/cos_build-test/global.sched/sched.pfprr_quantum_static.global.sched"
     ## path = "/home/minghwu/work/minghwu/composite/system_binaries/cos_build-test/global.ping/tests.unit_pingpong.global.ping"   
+    
+    basic_block_mode = 0
+    
     if len(sys.argv) >=3:
         entry_function = sys.argv[2]
     else:
@@ -406,53 +417,6 @@ if __name__ == '__main__':
     else:
         stub_path = "../../src/components/interface/" + path.split(".")[-1] + "/stubs/stubs.S"
     
-    driver = driver(path, entry_function, stub_path)
+    driver = driver(path, entry_function, stub_path, basic_block_mode)
     driver.run()
-    '''
-    disassembler = disassembler(path, entry_function)
-    if os.path.exists(stub_path):
-        disassembler.disasmstubs(stub_path)
-    disassembler.disasmsymbol()
-    disassembler.disasminvocation()  ##TODO @minghwu we also need to consider the cosrt_s_ from here as entry point.
-    disassembler.disasminst()
-    disassembler.disasmcalljmp()
-    
-    disassembler.sym_analyzer()
-    log("program entry:"+ str(disassembler.entry_pc))
-    log("program exit:"+ str(disassembler.exit_pc))
-    log("program stacksize"+ str(disassembler.acquire_stack_size))
-    register = register.register(disassembler.acquire_stack_size)
-    register.reg["pc"] = disassembler.entry_pc
-    execute = execute.execute(register)
-    parser = parser(disassembler.symbol, 
-                    disassembler.inst, 
-                    register,
-                    execute,
-                    disassembler.entry_pc,
-                    disassembler.exit_pc, 
-                    disassembler.acquire_stack_address,
-                    disassembler.invo_jmp_table,
-                    disassembler.call_jmp_table)
-    
-    parser.stack_analyzer()
-    
-    logresult(parser.stackfunction)
-    i = 0
-    for j in parser.stackfunction:
-        logresult(j)
-        logresult(i)
-        i = i + 1
-    logresult(parser.stacklist)
-    i = 0
-    for j in parser.stacklist:
-        logresult(i)
-        logresult(j)
-        i = i + 1
-    
-    logresult(parser.edge)
-    
-    stacksize = min(parser.stacklist)
-    logresult(stacksize)
-    logrust(PowerOf2(abs(stacksize)))
-    '''
     

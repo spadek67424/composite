@@ -102,7 +102,7 @@ class execute:
             elif inst.id == (X86_INS_CALL):  ## catch call instruction
                 self.reg["rsp"] -= 8
                 if (not flagimm):
-                    logcall(hex(inst.address), inst.mnemonic, inst.op_str)
+                    logerror(hex(inst.address), inst.mnemonic, inst.op_str)
                     logerror("here is dynamic that we do not handle.")
                     logerror(hex(inst.address), inst.mnemonic, inst.op_str)
                     self.reg["call_or_jmp"] = 2
@@ -229,7 +229,6 @@ class execute:
                     logcall(hex(inst.address), inst.mnemonic, inst.op_str)
                     logcall("here is an static jump")
                     self.reg["pc"] = int(dst, 0)
-                    self.reg["pc"]
                     edge.add((hex(vertexfrom), dst))  ## graph
                     self.reg["call_or_jmp"] = 1
             else:

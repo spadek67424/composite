@@ -22,7 +22,6 @@ class disassembler:
         self.call_jmp_table = dict()   ## hardcode the call/jmp for fetching pc 
         self.slm_ipithd_create_address = 0  ## hardcode the thread function for scheduler.
         
-        
         self.vertex = dict()            ## construct the calling graph
         self.entry_function = entry_function
         self.entry_function_list = list()    ## need to put the cosrt_s into it.
@@ -32,11 +31,6 @@ class disassembler:
         self.acquire_stack_size = 0
         self.init_done_address = 0
         self.init_done_end_address = 0
-
-        self.init_parallel_await_init_address = 0
-        self.init_parallel_await_init_end_address = 0
-        
-        self.cos_defcompinfo_init_address = 0
                 
     def disasmstubs(self, file_path):
         stub_pattern = re.compile(r'cos_asm_stub\((\w+)\)')
@@ -76,8 +70,6 @@ class disassembler:
                 pc_flag = 1
             if (pc_flag == 1):               ## catch the point until the next symbol, means it is exit point.
                 self.exit_pc = inst.address
-            
-            
             
             if inst.address in self.symbol and self.symbol[inst.address] == "custom_acquire_stack":  ## try to catch the movabs which is in the acquire_stack function to set rsp.
                 stack_flag = 1
@@ -167,7 +159,7 @@ class disassembler:
                         self.init_done_address = symbol['st_value'] 
                     if "__cosrt_extern_init_parallel_await_init":
                         self.init_parallel_await_init_address = symbol['st_value']
-    
+
     def disasmcalljmp(self):  ## I hardcode a lot of jump call address here for execution and function pointer. 
         with open(self.path, 'rb') as f:
             elf = ELFFile(f)
@@ -250,7 +242,7 @@ class parser:
         self.seenlist = [] ## handle the while loop jmp.
         self.basic_block_mode = basic_block_mode
         
-    def stack_analyzer(self):
+    def stack_analyzer(self, basic_block_flag):
         address_list = list(self.inst.keys())  ## a list for instruction address.
         address_list.append(-1) ## dummy value for last iteration.
         self.index = address_list.index(self.register.reg["pc"]) ## index for each instruction address.
@@ -258,7 +250,7 @@ class parser:
         nextinstRip.append(-1) ## dummy value for last iteration.
         while(self.register.reg["pc"] != self.exit_pc):
             self.register.updaterip(nextinstRip[self.index + 1 if self.index + 1 in nextinstRip else self.index]) ## catch the rip for memory instruction.
-            if self.register.reg["call_or_jmp"] == 0 and self.register.reg["pc"] in self.symbol.keys():  ## check function block (as basic block but we use function as unit.)
+            if self.register.reg["pc"] in self.symbol.keys():  ## check function block (as basic block but we use function as unit.)
                 self.stackfunction.append(self.symbol[self.register.reg["pc"]])
                 logstack(self.symbol[self.register.reg["pc"]])   ## TODO: here is error.
                 self.register.updatestackreg()
@@ -272,14 +264,11 @@ class parser:
                 vertexfrom = self.register.reg["pc"]
                 self.vertex.add(vertexfrom)
                 ######
-            self.register.cleancalljmp()  # clean the call inst.
             self.execute.exe(self.inst[self.register.reg["pc"]], self.edge, vertexfrom)
             self.register.updatestackreg()
             
-            
             #### fetch next instruction pc
-            
-            if address_list[self.index + 1] in self.symbol.keys() :  ## have a virtual return address for some function does not have ret.
+            if address_list[self.index + 1] in self.symbol.keys() : ## have a virtual return address for some function does not have ret.
                 self.execute.exe(-1, -1, -1)  ## virtual ret.
                 if self.execute.retflag == 1:
                     self.index = address_list.index(self.retcallpc.pop()) if len(self.retcallpc) > 0 else self.index + 1
@@ -336,8 +325,6 @@ class parser:
         self.stacklist.append(self.register.reg["stack"])
         self.stacklist = self.stacklist[1:]
         return (self.stackfunction,self.stacklist)
-    
-    
 class driver:
     def __init__(self, path, entry_function, stub_path, basic_block_mode) -> None:
         self.disassembler = disassembler(path, entry_function)
@@ -386,13 +373,27 @@ class driver:
         return a + 1
 
     def run(self):
-        self.parser.stack_analyzer()
+        self.parser.stack_analyzer(self.basic_block_flag)
 
         logresult(self.parser.stackfunction)
         logresult(self.parser.stacklist)
         
         logresult(self.parser.edge)
+        logresult(self.parser.stacklist)
 
+        
+        logresult(self.parser.stackfunction)
+        i = 0
+        for j in self.parser.stackfunction:
+            logresult(j)
+            logresult(i)
+            i = i + 1
+        logresult(self.parser.stacklist)
+        i = 0
+        for j in self.parser.stacklist:
+            logresult(i)
+            logresult(j)
+            i = i + 1
         stacksize = min(self.parser.stacklist)
         logresult(stacksize)
         logrust(self.PowerOf2(abs(stacksize)))
@@ -403,6 +404,8 @@ if __name__ == '__main__':
     ## path = "/home/minghwu/work/minghwu/composite/system_binaries/cos_build-test/global.ping/tests.unit_pingpong.global.ping"   
     
     basic_block_mode = 0
+    
+    basic_block_flag = 0  ## Is it basic block mode = 1 / stack mode = 0.
     
     if len(sys.argv) >=3:
         entry_function = sys.argv[2]

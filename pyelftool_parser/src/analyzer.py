@@ -242,7 +242,7 @@ class parser:
         self.seenlist = [] ## handle the while loop jmp.
         self.basic_block_mode = basic_block_mode
         
-    def stack_analyzer(self, basic_block_flag):
+    def stack_analyzer(self):
         address_list = list(self.inst.keys())  ## a list for instruction address.
         address_list.append(-1) ## dummy value for last iteration.
         self.index = address_list.index(self.register.reg["pc"]) ## index for each instruction address.
@@ -258,7 +258,7 @@ class parser:
                 
                 if self.basic_block_mode == 1:
                     self.register.cleanstack() 
-                    self.register.resetrsp() 
+                    self.register.alignrsp() 
                 
                 ###### Graph
                 vertexfrom = self.register.reg["pc"]
@@ -373,7 +373,7 @@ class driver:
         return a + 1
 
     def run(self):
-        self.parser.stack_analyzer(self.basic_block_flag)
+        self.parser.stack_analyzer()
 
         logresult(self.parser.stackfunction)
         logresult(self.parser.stacklist)

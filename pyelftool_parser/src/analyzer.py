@@ -251,6 +251,8 @@ class parser:
                 self.execute.retflag = 0
                 logcall("aaaa")
                 log("return")
+                return 1
+        return 0
     def stack_analyzer(self):
         address_list = list(self.inst.keys())  ## a list for instruction address.
         address_list.append(-1) ## dummy value for last iteration.
@@ -279,8 +281,9 @@ class parser:
             
             
             #### fetch next instruction pc
-            self.check_virtual_return(address_list)
-            if address_list[self.index] in self.invo_jmp_table:  ### hardcode the synchronization table, we jmp to target address.
+            if self.check_virtual_return(address_list):
+                pass
+            elif address_list[self.index] in self.invo_jmp_table:  ### hardcode the synchronization table, we jmp to target address.
                 if self.inst[address_list[self.index]].id == X86_INS_CALL:
                     self.retcallpc.append(self.inst[address_list[self.index + 1]].address)
                 self.seenlist.append(self.inst[address_list[self.index]].address)
@@ -296,8 +299,10 @@ class parser:
                     self.index = address_list.index(self.retjmppc)
                     self.retjmpflag = 0
                 else:
-                    self.check_virtual_return(address_list)
-                    self.index = self.index + 1
+                    if self.check_virtual_return(address_list):
+                        pass
+                    else:
+                        self.index = self.index + 1
             else:     ## handle the call/jmp instruction
                 if self.inst[address_list[self.index]].address in self.call_jmp_table and self.inst[address_list[self.index]].address not in self.seenlist:
                     self.edge.add((hex(self.inst[address_list[self.index]].address), hex(self.call_jmp_table[address_list[self.index]])))
@@ -311,19 +316,25 @@ class parser:
                     if self.register.reg["call_or_jmp"] == 2:  ## handle unknown function pointer.
                         logerror("Here is dynamic call")
                         logerror(self.inst[address_list[self.index]].address, self.inst[address_list[self.index]].mnemonic, self.inst[address_list[self.index]].op_str)
-                        self.check_virtual_return(address_list)
-                        self.index = self.index + 1   
+                        if self.check_virtual_return(address_list):
+                            pass
+                        else:
+                            self.index = self.index + 1 
                     elif self.inst[address_list[self.index]].address not in self.seenlist: ## it seems never reach.
                         self.retcallpc.append(self.inst[address_list[self.index + 1]].address)
                         self.seenlist.append(self.inst[address_list[self.index]].address)
                         self.index = address_list.index(self.register.reg["pc"])
                     elif self.inst[address_list[self.index]].address in self.seenlist:  ## I think we need to reset the seenlist.
                         self.seenlist.remove(self.inst[address_list[self.index]].address)
-                        self.check_virtual_return(address_list)
-                        self.index = self.index + 1
+                        if self.check_virtual_return(address_list):
+                            pass
+                        else:
+                            self.index = self.index + 1
                     else:
-                        self.check_virtual_return(address_list)                                 
-                        self.index = self.index + 1
+                        if self.check_virtual_return(address_list):
+                            pass
+                        else:
+                            self.index = self.index + 1
                     self.register.reg["call_or_jmp"] = 0 ## clean the invo reg.        
                 else:  ## handle jmp inst  all dynamic function jmp would go here, otherwise catch by jmp table.
                     if self.inst[address_list[self.index]].address not in self.seenlist: ## handle the while loop of jmp, or seen list
@@ -331,13 +342,17 @@ class parser:
                         self.index = address_list.index(self.register.reg["pc"])
                     elif self.inst[address_list[self.index]].address in self.seenlist:
                         self.seenlist.remove(self.inst[address_list[self.index]].address)
-                        self.check_virtual_return(address_list)
-                        self.index = self.index + 1
+                        if self.check_virtual_return(address_list):
+                            pass
+                        else:
+                            self.index = self.index + 1
                     else:  ## unknown function pointer or already seen
                         logerror("Here is dynamic jmp")
                         logerror(self.inst[address_list[self.index]].address, self.inst[address_list[self.index]].mnemonic, self.inst[address_list[self.index]].op_str)
-                        self.check_virtual_return(address_list)
-                        self.index = self.index + 1
+                        if self.check_virtual_return(address_list):
+                            pass
+                        else:
+                            self.index = self.index + 1
                     self.register.reg["call_or_jmp"] = 0 ## clean the call/jmp reg.
             ####
             self.register.reg["pc"] = address_list[self.index] ## Setting the pc from index.

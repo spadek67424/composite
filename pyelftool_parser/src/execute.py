@@ -7,7 +7,6 @@ class execute:
         self.reg = register.reg
         self.retflag = 0
     def exe(self, inst, edge, vertexfrom):
-        
         if (inst == -1 and edge == -1 and vertexfrom -1): ## virtual return
             self.retflag = 1
             return

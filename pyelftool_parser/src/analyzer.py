@@ -18,8 +18,8 @@ class disassembler:
         self.symbol = dict()            ## mapping address to symbol
         self.symbol_address = dict()    ## mapping symbol to address
         self.syn_invocation = dict()    ## mapping the synchronization symbol address to target function
-        self.invo_jmp_table = dict()   ## hardcode the invocation address for fetching pc 
-        self.call_jmp_table = dict()   ## hardcode the call/jmp for fetching pc 
+        self.invo_jmp_table = dict()    ## hardcode the invocation address for fetching pc 
+        self.call_jmp_table = dict()    ## hardcode the call/jmp for fetching pc 
         self.slm_ipithd_create_address = 0  ## hardcode the thread function for scheduler.
         
         self.vertex = dict()            ## construct the calling graph
@@ -57,23 +57,22 @@ class disassembler:
         for stub_indirect in stub_indirects:
             self.invocation_function.append(stub_indirect)
 
-    def disasminstpass(self, md, ops, addr): ## pinpoint all the needed hardcode address, also decode the insts.
+    def disasminstpass(self, md, ops, addr):    ## pinpoint all the needed hardcode address, also decode the insts.
         pc_flag = 0
         stack_flag = 0
         
         for inst in md.disasm(ops, addr):
             self.inst[inst.address] = (inst)
-            if (inst.address in self.symbol):  ## it is to catch the next symbol start, also for catch the last inst. @minghwu: I think it could have a better way to do this.
+            if (inst.address in self.symbol):   ## it is to catch the next symbol start, also for catch the last inst. @minghwu: I think it could have a better way to do this.
                 pc_flag = 0
                 
             if (inst.address == self.entry_pc): ## when it is entry point, set the flag = 1 to catch exitpoint.
                 pc_flag = 1
-            if (pc_flag == 1):               ## catch the point until the next symbol, means it is exit point.
+            if (pc_flag == 1):                  ## catch the point until the next symbol, means it is exit point.
                 self.exit_pc = inst.address
             
             if inst.address in self.symbol and self.symbol[inst.address] == "custom_acquire_stack":  ## try to catch the movabs which is in the acquire_stack function to set rsp.
                 stack_flag = 1
-            
             
             if stack_flag == 1 and inst.id == X86_INS_MOVABS:
                 stack_flag = 0
@@ -86,10 +85,17 @@ class disassembler:
                 log(self.acquire_stack_size)
     
     def disasmthreadpointer(self, md, ops, addr):
+        thread_function_list = list()
         for inst in md.disasm(ops, addr):
             if inst.address in self.symbol and self.symbol[inst.address] == "slm_ipithd_create": 
                 self.slm_ipithd_create_address = inst.address
-        
+                thread_function_list.append(self.slm_ipithd_create_address)
+                
+            if inst.address in self.symbol and self.symbol[inst.address] == "capmgr_initthd_create": 
+                self.capmgr_initthd_create = inst.address
+                thread_function_list.append(self.capmgr_initthd_create)
+                
+                
         flag = 0
         for inst in md.disasm(ops, addr):
             if inst.address in self.symbol and self.symbol[inst.address] == "cos_upcall_fn":
@@ -101,10 +107,8 @@ class disassembler:
                     if i.type == X86_OP_IMM: ## mean it is not the call instruction we want, because it is IMM call.
                         continue
                 flag = 0
-                self.call_jmp_table[inst.address] = self.slm_ipithd_create_address
-                    
-                    
-        
+                self.call_jmp_table[inst.address] = thread_function_list
+
     def disasminst(self):  ## decode the inst for execute
         with open(self.path, 'rb') as f:
             elf = ELFFile(f)
@@ -170,8 +174,8 @@ class disassembler:
             md.detail = True
             flagimm = 0
             
-            for inst in md.disasm(ops, addr): ## decode the call and jmp address here.
-                if inst.address in self.syn_invocation:
+            for inst in md.disasm(ops, addr): ## hardcode the call and jmp address here.
+                if inst.address in self.syn_invocation: ## build up the invocation table.
                     self.invo_jmp_table[inst.address] = self.syn_invocation[inst.address]
                 elif len(inst.operands) == 1 and (inst.id == X86_INS_CALL or inst.id == X86_INS_JMP or inst.id == X86_INS_JE or inst.id == X86_INS_JLE or inst.id == X86_INS_JGE or inst.id == X86_INS_JG or inst.id == X86_INS_JNE): ## check it is not function pointer and hardcode the call/jmp table.
                     for i in inst.operands:
@@ -179,8 +183,6 @@ class disassembler:
                             flagimm = 1
                     if flagimm == 1:            ## build up the static call/jmp table
                         self.call_jmp_table[inst.address] = int(inst.op_str, 0)
-                    if flagimm == 0:            ## synchronization invocation call would be here, @@@@ WARNING booter has problem.
-                        logerror("dynamic address or function pointer.")
                     flagimm = 0
 
     
@@ -241,7 +243,14 @@ class parser:
         self.retcallpc = []
         self.seenlist = [] ## handle the while loop jmp.
         self.basic_block_mode = basic_block_mode
-        
+    def check_virtual_return(self, address_list):
+        if address_list[self.index + 1] in self.symbol.keys() : ## have a virtual return address for some function does not have ret.
+            self.execute.exe(-1, -1, -1)  ## virtual ret.
+            if self.execute.retflag == 1:
+                self.index = address_list.index(self.retcallpc.pop()) if len(self.retcallpc) > 0 else self.index + 1
+                self.execute.retflag = 0
+                logcall("aaaa")
+                log("return")
     def stack_analyzer(self):
         address_list = list(self.inst.keys())  ## a list for instruction address.
         address_list.append(-1) ## dummy value for last iteration.
@@ -267,14 +276,14 @@ class parser:
             self.execute.exe(self.inst[self.register.reg["pc"]], self.edge, vertexfrom)
             self.register.updatestackreg()
             
+            
+            
             #### fetch next instruction pc
-            if address_list[self.index + 1] in self.symbol.keys() : ## have a virtual return address for some function does not have ret.
-                self.execute.exe(-1, -1, -1)  ## virtual ret.
-                if self.execute.retflag == 1:
-                    self.index = address_list.index(self.retcallpc.pop()) if len(self.retcallpc) > 0 else self.index + 1
-                    log("return")
-            elif address_list[self.index] in self.invo_jmp_table:  ### hardcode the synchronization table, we jmp to target address.
-                self.retcallpc.append(address_list[self.index + 1])
+            self.check_virtual_return(address_list)
+            if address_list[self.index] in self.invo_jmp_table:  ### hardcode the synchronization table, we jmp to target address.
+                if self.inst[address_list[self.index]].id == X86_INS_CALL:
+                    self.retcallpc.append(self.inst[address_list[self.index + 1]].address)
+                self.seenlist.append(self.inst[address_list[self.index]].address)
                 self.edge.add((hex(address_list[self.index]), hex(self.invo_jmp_table[address_list[self.index]])))
                 self.index = address_list.index(self.invo_jmp_table[address_list[self.index]])
                 self.register.reg["rsp"] -= 8 ## because the invocation call.
@@ -287,37 +296,48 @@ class parser:
                     self.index = address_list.index(self.retjmppc)
                     self.retjmpflag = 0
                 else:
+                    self.check_virtual_return(address_list)
                     self.index = self.index + 1
             else:     ## handle the call/jmp instruction
                 if self.inst[address_list[self.index]].address in self.call_jmp_table and self.inst[address_list[self.index]].address not in self.seenlist:
                     self.edge.add((hex(self.inst[address_list[self.index]].address), hex(self.call_jmp_table[address_list[self.index]])))
                     self.seenlist.append(self.inst[address_list[self.index]].address)
-                    
                     if self.inst[address_list[self.index]].id == X86_INS_CALL:
-                        self.retcallpc.append(address_list[self.index + 1])
+                        self.retcallpc.append(self.inst[address_list[self.index + 1]].address)
                     self.index = address_list.index(self.call_jmp_table[address_list[self.index]])
                     log("fastpace with hardcode call/jmp table.")
                     self.register.reg["call_or_jmp"] = 0
-                elif self.inst[address_list[self.index]].id == (X86_INS_CALL): ## if this is call, append the return address to stack, all dynamic function call would go here, otherwise catch by call table.
-                    self.retcallpc.append(address_list[self.index + 1])
-                    if self.register.reg["call_or_jmp"] == 1:  ## handle unknown function pointer.
+                elif self.inst[address_list[self.index]].id == (X86_INS_CALL): ## If call instructions does not be catched by calljmp table, then would go to here.
+                    if self.register.reg["call_or_jmp"] == 2:  ## handle unknown function pointer.
                         logerror("Here is dynamic call")
                         logerror(self.inst[address_list[self.index]].address, self.inst[address_list[self.index]].mnemonic, self.inst[address_list[self.index]].op_str)
+                        self.check_virtual_return(address_list)
                         self.index = self.index + 1   
-                    elif self.inst[address_list[self.index]].address not in self.seenlist:
+                    elif self.inst[address_list[self.index]].address not in self.seenlist: ## it seems never reach.
+                        self.retcallpc.append(self.inst[address_list[self.index + 1]].address)
                         self.seenlist.append(self.inst[address_list[self.index]].address)
                         self.index = address_list.index(self.register.reg["pc"])
+                    elif self.inst[address_list[self.index]].address in self.seenlist:  ## I think we need to reset the seenlist.
+                        self.seenlist.remove(self.inst[address_list[self.index]].address)
+                        self.check_virtual_return(address_list)
+                        self.index = self.index + 1
                     else:
+                        self.check_virtual_return(address_list)                                 
                         self.index = self.index + 1
                     self.register.reg["call_or_jmp"] = 0 ## clean the invo reg.        
                 else:  ## handle jmp inst  all dynamic function jmp would go here, otherwise catch by jmp table.
                     if self.inst[address_list[self.index]].address not in self.seenlist: ## handle the while loop of jmp, or seen list
                         self.seenlist.append(self.inst[address_list[self.index]].address)
                         self.index = address_list.index(self.register.reg["pc"])
-                    else:  ## unknown function pointer or already seen
+                    elif self.inst[address_list[self.index]].address in self.seenlist:
+                        self.seenlist.remove(self.inst[address_list[self.index]].address)
+                        self.check_virtual_return(address_list)
                         self.index = self.index + 1
+                    else:  ## unknown function pointer or already seen
                         logerror("Here is dynamic jmp")
                         logerror(self.inst[address_list[self.index]].address, self.inst[address_list[self.index]].mnemonic, self.inst[address_list[self.index]].op_str)
+                        self.check_virtual_return(address_list)
+                        self.index = self.index + 1
                     self.register.reg["call_or_jmp"] = 0 ## clean the call/jmp reg.
             ####
             self.register.reg["pc"] = address_list[self.index] ## Setting the pc from index.
@@ -380,7 +400,6 @@ class driver:
         
         logresult(self.parser.edge)
         logresult(self.parser.stacklist)
-
         
         logresult(self.parser.stackfunction)
         i = 0
@@ -403,9 +422,7 @@ if __name__ == '__main__':
     ## path = "../testbench/composite/system_binaries/cos_build-test/global.sched/sched.pfprr_quantum_static.global.sched"
     ## path = "/home/minghwu/work/minghwu/composite/system_binaries/cos_build-test/global.ping/tests.unit_pingpong.global.ping"   
     
-    basic_block_mode = 0
-    
-    basic_block_flag = 0  ## Is it basic block mode = 1 / stack mode = 0.
+    basic_block_mode = 0  ## Is it basic block mode = 1 / stack mode = 0.
     
     if len(sys.argv) >=3:
         entry_function = sys.argv[2]

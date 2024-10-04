@@ -211,7 +211,6 @@ class execute:
                     logcall(hex(inst.address), inst.mnemonic, inst.op_str)
                     logcall("here is an static jump")
                     self.reg["pc"] = int(dst, 0)
-                    self.reg["pc"]
                     self.reg["call_or_jmp"] = 1
             elif inst.id == (X86_INS_JNE): ## Not yet implement the simulator
                 if (not flagimm):

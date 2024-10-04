@@ -251,22 +251,16 @@ class parser:
         self.index = address_list.index(self.register.reg["pc"]) ## index for each instruction address.
         nextinstRip = list(self.inst.keys())
         nextinstRip.append(-1) ## dummy value for last iteration.
+        self.register.updaterip(nextinstRip[self.index + 1 if self.index + 1 in nextinstRip else self.index]) ## catch the rip for memory instruction.
         while(self.register.reg["pc"] != self.exit_pc):
-            print("stack")
-            print(self.register.reg["stack"])
-            self.register.updaterip(nextinstRip[self.index + 1 if self.index + 1 in nextinstRip else self.index]) ## catch the rip for memory instruction.
-            if self.register.reg["pc"] in self.symbol.keys():  ## check function block (as basic block but we use function as unit.)
-                self.stackfunction.append(self.symbol[self.register.reg["pc"]])   
-                self.register.updatestackreg()
-                
-                self.stacklist.append(self.register.reg["stack"])
-               
+            
             #### execute 
+            
             self.execute.exe(self.inst[self.register.reg["pc"]])
             
-            
-            
             #### fetch next instruction pc and commit
+            vertexfrom = address_list[self.index]  ## this is for graph
+            print(hex(vertexfrom))
             if address_list[self.index] in self.seenlist: ## Already seen this address before, going to context switch to last branch.
                 self.seenlist.remove(address_list[self.index])
                 if len(self.JtypeClass) > 0:
@@ -281,7 +275,7 @@ class parser:
                 if self.IsJtypeInst(self.inst[address_list[self.index]]):
                     self.JtypeClass.append(jmp_class.JmpContext(self.index+1, self.index, self.register.reg["stack"], self.register.reg["rspbegin"], self.register.reg["rsp"]))
                 self.seenlist.append(address_list[self.index])
-                self.edge.add((hex(address_list[self.index]), hex(self.invo_jmp_table[address_list[self.index]])))
+                self.edge.add((hex(vertexfrom), hex(self.invo_jmp_table[address_list[self.index]])))
                 self.index = address_list.index(self.invo_jmp_table[address_list[self.index]])
                 self.register.reg["call_or_jmp"] = 0 ## clean the call/jmp reg. 
                 log("fastpace with hardcode invocation table.")
@@ -291,11 +285,12 @@ class parser:
                 self.JtypeClass.append(jmp_class.JmpContext(self.index + 1, self.index, self.register.reg["stack"], self.register.reg["rspbegin"], self.register.reg["rsp"]))
                 for thread_function_address in self.thread_list: ## here is interesting part, self triger self to search
                     self.JtypeClass.append(jmp_class.JmpContext(address_list.index(thread_function_address), self.index, self.register.reg["stack"], self.register.reg["rspbegin"], self.register.reg["rsp"]))
-                    self.edge.add((hex(address_list[self.index]), thread_function_address))
+                    self.edge.add((hex(vertexfrom), thread_function_address))
                 self.seenlist.append(address_list[self.index])
                 self.register.reg["call_or_jmp"] = 0 ## clean the call/jmp reg. 
                 log("fastpace with hardcode thread table.")
             elif self.register.reg["call_or_jmp"] == 0:  ## it is not jmp/call inst, try to fetch next instruction
+                print("checkpoint")
                 if self.inst[self.register.reg["pc"]].id == (X86_INS_RET): ## ret instruction, go to return address.
                     if len(self.JtypeClass) > 0:
                             branchnode = self.JtypeClass.pop()
@@ -317,8 +312,6 @@ class parser:
                 if self.inst[address_list[self.index]].id == (X86_INS_CALL): ## handle call inst, if it is not catched by the fast pass.
                     if self.register.reg["call_or_jmp"] == 2:  ## handle unknown function pointer.
                         logerror("Here is dynamic call")
-                        logerror(address_list[self.index])
-                        logerror(address_list[self.index])
                         logerror(address_list[self.index], self.inst[address_list[self.index]].mnemonic, self.inst[address_list[self.index]].op_str)
                         if self.check_virtual_return(address_list):
                             if len(self.JtypeClass) > 0:
@@ -333,6 +326,7 @@ class parser:
                         # self.retcallpc.append(self.inst[address_list[self.index + 1]].address)
                         self.JtypeClass.append(jmp_class.JmpContext(self.index+1, self.index, self.register.reg["stack"], self.register.reg["rspbegin"], self.register.reg["rsp"]))
                         self.seenlist.append(address_list[self.index])
+                        self.edge.add((hex(vertexfrom), hex(self.register.reg["pc"])))
                         self.index = address_list.index(self.register.reg["pc"])
                     else: ## It is seen, time to pop.
                         self.seenlist.remove(address_list[self.index])
@@ -356,9 +350,10 @@ class parser:
                                 self.register.reg["rspbegin"] = branchnode.rspbegin
                         else:
                             self.index = self.index + 1
-                    elif address_list[self.index] not in self.seenlist: ## handle the while loop of jmp, or seen list
+                    elif address_list[self.index] not in self.seenlist:
                         self.seenlist.append(address_list[self.index])
                         self.JtypeClass.append(jmp_class.JmpContext(self.index+1, self.index, self.register.reg["stack"], self.register.reg["rspbegin"], self.register.reg["rsp"]))
+                        self.edge.add((hex(vertexfrom), hex(self.register.reg["pc"])))
                         self.index = address_list.index(self.register.reg["pc"])
                     else: ## it is seen, time to pop.
                         self.seenlist.remove(address_list[self.index])
@@ -368,12 +363,18 @@ class parser:
                             self.register.reg["stack"] = branchnode.stack
                             self.register.reg["rsp"] = branchnode.rsp
                             self.register.reg["rspbegin"] = branchnode.rspbegin   
-                    self.register.reg["call_or_jmp"] = 0 ## clean the call/jmp reg.
+        
+                    
+                    
+            #### commit the instruction.
+            self.register.reg["call_or_jmp"] = 0 ## clean the call/jmp reg.
             self.register.updatestackreg()
-            ####
-            self.register.reg["pc"] = address_list[self.index] ## Setting the pc from index.
-        self.stacklist.append(self.register.reg["stack"])
-        # self.stacklist = self.stacklist[1:]
+            self.register.reg["pc"] = address_list[self.index]
+            if self.register.reg["pc"] in self.symbol:
+                self.stackfunction.append(self.symbol[self.register.reg["pc"]])
+                self.stacklist.append(self.register.reg["stack"])
+            self.register.updaterip(nextinstRip[self.index + 1 if self.index + 1 in nextinstRip else self.index]) ## catch the rip for memory instruction.
+            ########
         return (self.stackfunction,self.stacklist)
 class driver:
     def __init__(self, path, entry_function, stub_path, basic_block_mode) -> None:
@@ -415,29 +416,14 @@ class driver:
 
     def run(self):
         self.parser.stack_analyzer()
-
-        logresult(self.parser.stackfunction)
-        logresult(self.parser.stacklist)
         
         logresult(self.parser.edge)
-        logresult(self.parser.stacklist)
         
-        logresult(self.parser.stackfunction)
-        i = 0
+
         for j in zip(self.parser.stackfunction, self.parser.stacklist):
             logresult(j)
-        #    logresult(i)
-        #    i = i + 1
-        #logresult(self.parser.stacklist)
-        '''
-        i = 0
-        for j in self.parser.stacklist:
-            logresult(i)
-            logresult(j)
-            i = i + 1
-        '''
+            
         logresult(self.register.reg["max"])
-        # logrust(self.PowerOf2(abs(stacksize)))
         logrust(self.PowerOf2(abs(self.register.reg["max"])))        
 
 if __name__ == '__main__':

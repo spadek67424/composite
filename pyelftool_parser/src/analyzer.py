@@ -238,7 +238,7 @@ class parser:
         self.basic_block_mode = basic_block_mode
     def check_virtual_return(self, address_list):
         if address_list[self.index + 1] in self.symbol.keys() : ## have a virtual return address for some function does not have ret.
-            self.execute.exe(-1, -1, -1)  ## virtual ret.
+            self.execute.exe(-1)  ## virtual ret.
             if self.execute.retflag == 1:
                 log("virtual return")
                 return 1
@@ -256,27 +256,17 @@ class parser:
             print(self.register.reg["stack"])
             self.register.updaterip(nextinstRip[self.index + 1 if self.index + 1 in nextinstRip else self.index]) ## catch the rip for memory instruction.
             if self.register.reg["pc"] in self.symbol.keys():  ## check function block (as basic block but we use function as unit.)
-                self.stackfunction.append(self.symbol[self.register.reg["pc"]])
-                logstack(self.symbol[self.register.reg["pc"]])
-                print(self.register.reg["rsp"])
-                
-                
+                self.stackfunction.append(self.symbol[self.register.reg["pc"]])   
                 self.register.updatestackreg()
-                print(self.register.reg["rsp"])
                 
                 self.stacklist.append(self.register.reg["stack"])
-                
-                ###### Graph
-                vertexfrom = self.register.reg["pc"]
-                self.vertex.add(vertexfrom)
-                ######
-            
-            
-            self.execute.exe(self.inst[self.register.reg["pc"]], self.edge, vertexfrom)
+               
+            #### execute 
+            self.execute.exe(self.inst[self.register.reg["pc"]])
             
             
             
-            #### fetch next instruction pc
+            #### fetch next instruction pc and commit
             if address_list[self.index] in self.seenlist: ## Already seen this address before, going to context switch to last branch.
                 self.seenlist.remove(address_list[self.index])
                 if len(self.JtypeClass) > 0:
@@ -303,7 +293,6 @@ class parser:
                     self.JtypeClass.append(jmp_class.JmpContext(address_list.index(thread_function_address), self.index, self.register.reg["stack"], self.register.reg["rspbegin"], self.register.reg["rsp"]))
                     self.edge.add((hex(address_list[self.index]), thread_function_address))
                 self.seenlist.append(address_list[self.index])
-                print("aaaaa")
                 self.register.reg["call_or_jmp"] = 0 ## clean the call/jmp reg. 
                 log("fastpace with hardcode thread table.")
             elif self.register.reg["call_or_jmp"] == 0:  ## it is not jmp/call inst, try to fetch next instruction
@@ -402,7 +391,7 @@ class driver:
         log("program stacksize"+ str(self.disassembler.acquire_stack_size))
         self.register = register.register(self.disassembler.acquire_stack_size)
         self.register.reg["pc"] = self.disassembler.entry_pc
-        self.execute = execute.execute(self.register)
+        self.execute = execute.execute(self.register, )
         self.parser = parser(self.disassembler.symbol, 
                         self.disassembler.inst, 
                         self.register,

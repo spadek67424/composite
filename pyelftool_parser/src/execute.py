@@ -6,8 +6,8 @@ class execute:
         self.register = register
         self.reg = register.reg
         self.retflag = 0
-    def exe(self, inst, edge, vertexfrom):
-        if (inst == -1 and edge == -1 and vertexfrom -1): ## virtual return
+    def exe(self, inst):
+        if (inst == -1): ## virtual return
             self.retflag = 1
             return
         ## -----------------------------------------------
@@ -110,7 +110,6 @@ class execute:
                     logcall("here is an static call") 
                     logcall(inst.op_str)
                     self.reg["pc"] = int(dst, 0)  ## hex to int
-                    edge.add((hex(vertexfrom), hex(imm)))  ## graph
                     self.reg["call_or_jmp"] = 1
             elif inst.id == (X86_INS_RET):  ## catch RET instruction
                 self.reg["rsp"] += 8
@@ -172,7 +171,6 @@ class execute:
                     logcall(hex(inst.address), inst.mnemonic, inst.op_str)
                     logcall("here is an static jmp.")
                     self.reg["pc"] = int(dst, 0)
-                    edge.add((hex(vertexfrom), dst))  ## graph
                     self.reg["call_or_jmp"] = 1
             elif inst.id == (X86_INS_JE): ## Not yet implement the simulator
                 if (not flagimm):
@@ -183,7 +181,6 @@ class execute:
                     logcall(hex(inst.address), inst.mnemonic, inst.op_str)
                     logcall("here is an static jump")
                     self.reg["pc"] = int(dst, 0)
-                    edge.add((hex(vertexfrom), dst))  ## graph
                     self.reg["call_or_jmp"] = 1
             elif inst.id == (X86_INS_JLE): ## Not yet implement the simulator
                 if (not flagimm):
@@ -194,7 +191,6 @@ class execute:
                     logcall(hex(inst.address), inst.mnemonic, inst.op_str)
                     logcall("here is an static jump")
                     self.reg["pc"] = int(dst, 0)
-                    edge.add((hex(vertexfrom), dst))  ## graph
                     self.reg["call_or_jmp"] = 1
             elif inst.id == (X86_INS_JGE): ## Not yet implement the simulator
                 if (not flagimm):
@@ -205,7 +201,6 @@ class execute:
                     logcall(hex(inst.address), inst.mnemonic, inst.op_str)
                     logcall("here is an static jump")
                     self.reg["pc"] = int(dst, 0)
-                    edge.add((hex(vertexfrom), dst))  ## graph
                     self.reg["call_or_jmp"] = 1
             elif inst.id == (X86_INS_JG): ## Not yet implement the simulator
                 if (not flagimm):
@@ -217,7 +212,6 @@ class execute:
                     logcall("here is an static jump")
                     self.reg["pc"] = int(dst, 0)
                     self.reg["pc"]
-                    edge.add((hex(vertexfrom), dst))  ## graph
                     self.reg["call_or_jmp"] = 1
             elif inst.id == (X86_INS_JNE): ## Not yet implement the simulator
                 if (not flagimm):
@@ -228,7 +222,6 @@ class execute:
                     logcall(hex(inst.address), inst.mnemonic, inst.op_str)
                     logcall("here is an static jump")
                     self.reg["pc"] = int(dst, 0)
-                    edge.add((hex(vertexfrom), dst))  ## graph
                     self.reg["call_or_jmp"] = 1
             else:
                 loginst(hex(inst.address), inst.mnemonic, inst.op_str)

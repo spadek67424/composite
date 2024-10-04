@@ -274,7 +274,7 @@ class parser:
             
             
             #### fetch next instruction pc
-            if self.inst[address_list[self.index]].address in self.seenlist: ## Already seen this address before, going to context switch to last branch.
+            if address_list[self.index] in self.seenlist: ## Already seen this address before, going to context switch to last branch.
                 if len(self.JtypeClass) > 0:
                     branchnode = self.JtypeClass.pop()
                     self.index = branchnode.returnPCIndex
@@ -288,7 +288,7 @@ class parser:
                     
                 if self.IsJtypeInst(self.inst[address_list[self.index]]):
                     self.JtypeClass.append(jmp_class.JmpContext(self.index+1, self.index, self.register.reg["stack"], self.register.reg["rspbegin"], self.register.reg["rsp"]))
-                self.seenlist.append(self.inst[address_list[self.index]].address)
+                self.seenlist.append(address_list[self.index])
                 self.edge.add((hex(address_list[self.index]), hex(self.invo_jmp_table[address_list[self.index]])))
                 self.index = address_list.index(self.invo_jmp_table[address_list[self.index]])
                 self.register.reg["call_or_jmp"] = 0 ## clean the call/jmp reg. 
@@ -300,7 +300,7 @@ class parser:
                 for thread_function_address in self.thread_list: ## here is interesting part, self triger self to search
                     self.JtypeClass.append(jmp_class.JmpContext(address_list.index(thread_function_address), self.index, self.register.reg["stack"], self.register.reg["rspbegin"], self.register.reg["rsp"]))
                     self.edge.add((hex(address_list[self.index]), thread_function_address))
-                self.seenlist.append(self.inst[address_list[self.index]].address)
+                self.seenlist.append(address_list[self.index])
                 self.register.reg["rsp"] -= 8 ## because the invocation call.
                 self.register.reg["call_or_jmp"] = 0 ## clean the call/jmp reg. 
                 log("fastpace with hardcode thread table.")
@@ -326,7 +326,9 @@ class parser:
                 if self.inst[address_list[self.index]].id == (X86_INS_CALL): ## handle call inst, if it is not catched by the fast pass.
                     if self.register.reg["call_or_jmp"] == 2:  ## handle unknown function pointer.
                         logerror("Here is dynamic call")
-                        logerror(self.inst[address_list[self.index]].address, self.inst[address_list[self.index]].mnemonic, self.inst[address_list[self.index]].op_str)
+                        logerror(address_list[self.index])
+                        logerror(address_list[self.index])
+                        logerror(address_list[self.index], self.inst[address_list[self.index]].mnemonic, self.inst[address_list[self.index]].op_str)
                         if self.check_virtual_return(address_list):
                             if len(self.JtypeClass) > 0:
                                 branchnode = self.JtypeClass.pop()
@@ -336,10 +338,10 @@ class parser:
                                 self.register.reg["rspbegin"] = branchnode.rspbegin
                         else:
                             self.index = self.index + 1 
-                    elif self.inst[address_list[self.index]].address not in self.seenlist: ## TODO: handle the previous is call or jmp?
+                    elif address_list[self.index] not in self.seenlist: ## TODO: handle the previous is call or jmp?
                         # self.retcallpc.append(self.inst[address_list[self.index + 1]].address)
                         self.JtypeClass.append(jmp_class.JmpContext(self.index+1, self.index, self.register.reg["stack"], self.register.reg["rspbegin"], self.register.reg["rsp"]))
-                        self.seenlist.append(self.inst[address_list[self.index]].address)
+                        self.seenlist.append(address_list[self.index])
                         self.index = address_list.index(self.register.reg["pc"])
                     else: ## It is seen, time to pop.
                         if len(self.JtypeClass) > 0:
@@ -352,7 +354,7 @@ class parser:
                 else:  ## handle jmp inst, if it is not catched by the fast pass.
                     if self.register.reg["call_or_jmp"] == 2:  ## unknown function pointer or already seen
                         logerror("Here is dynamic jmp")
-                        logerror(self.inst[address_list[self.index]].address, self.inst[address_list[self.index]].mnemonic, self.inst[address_list[self.index]].op_str)
+                        logerror(address_list[self.index], self.inst[address_list[self.index]].mnemonic, self.inst[address_list[self.index]].op_str)
                         if self.check_virtual_return(address_list):
                             if len(self.JtypeClass) > 0:
                                 branchnode = self.JtypeClass.pop()
@@ -362,8 +364,8 @@ class parser:
                                 self.register.reg["rspbegin"] = branchnode.rspbegin
                         else:
                             self.index = self.index + 1
-                    elif self.inst[address_list[self.index]].address not in self.seenlist: ## handle the while loop of jmp, or seen list
-                        self.seenlist.append(self.inst[address_list[self.index]].address)
+                    elif address_list[self.index] not in self.seenlist: ## handle the while loop of jmp, or seen list
+                        self.seenlist.append(address_list[self.index])
                         self.JtypeClass.append(jmp_class.JmpContext(self.index+1, self.index, self.register.reg["stack"], self.register.reg["rspbegin"], self.register.reg["rsp"]))
                         self.index = address_list.index(self.register.reg["pc"])
                     else: ## it is seen, time to pop.

@@ -2,7 +2,7 @@ DEBUG = False
 DEBUGinst = False
 DEBUGresult = False
 DEBUGcall = False
-DEBUGerror = False
+DEBUGerror = True
 DEBUGstack = False
 DEBUGrust = True
 def log(*argv):

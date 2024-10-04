@@ -103,12 +103,10 @@ class disassembler:
                 flag = 1
             if flag == 1 and inst.id == X86_INS_CALL:
                 for i in inst.operands:
-                    if i.type == X86_OP_MEM: ## mean it is not the call instruction we want, because it is memory call.
-                        continue
-                    if i.type == X86_OP_IMM: ## mean it is not the call instruction we want, because it is IMM call.
-                        continue
-                flag = 0
-                self.thread_table[inst.address] = thread_function_list
+                    if i.type != X86_OP_MEM and i.type != X86_OP_IMM: ## mean it is not the call instruction we want, because it is memory call.
+                        if len(thread_function_list) > 0:
+                            self.thread_table[inst.address] = thread_function_list
+                            flag = 0
 
     def disasminst(self):  ## decode the inst for execute
         with open(self.path, 'rb') as f:
@@ -240,10 +238,7 @@ class parser:
         if address_list[self.index + 1] in self.symbol.keys() : ## have a virtual return address for some function does not have ret.
             self.execute.exe(-1, -1, -1)  ## virtual ret.
             if self.execute.retflag == 1:
-                self.index = address_list.index(self.retcallpc.pop()) if len(self.retcallpc) > 0 else self.index + 1
-                self.execute.retflag = 0
-                logcall("aaaa")
-                log("return")
+                log("virtual return")
                 return 1
         return 0
     def IsJtypeInst(self, inst):
@@ -270,6 +265,9 @@ class parser:
                 vertexfrom = self.register.reg["pc"]
                 self.vertex.add(vertexfrom)
                 ######
+            print("pcpcpcp")
+            print(hex(self.register.reg["pc"]))
+            print(self.inst[self.register.reg["pc"]])
             self.execute.exe(self.inst[self.register.reg["pc"]], self.edge, vertexfrom)
             self.register.updatestackreg()
             
@@ -277,33 +275,48 @@ class parser:
             
             #### fetch next instruction pc
             if self.inst[address_list[self.index]].address in self.seenlist: ## Already seen this address before, going to context switch to last branch.
-                #@TODO
-                pass
+                if len(self.JtypeClass) > 0:
+                    branchnode = self.JtypeClass.pop()
+                    self.index = branchnode.returnPCIndex
+                    self.register.reg["stack"] = branchnode.stack
+                    self.register.reg["rsp"] = branchnode.rsp
+                    self.register.reg["rspbegin"] = branchnode.rspbegin
             elif address_list[self.index] in self.invo_jmp_table:  ### hardcode the synchronization table, we jmp to target address.
                 if self.inst[address_list[self.index]].id == X86_INS_CALL:
-                    self.retcallpc.append(self.inst[address_list[self.index + 1]].address)
+                    self.JtypeClass.append(jmp_class.JmpContext(self.index+1, self.index, self.register.reg["stack"], self.register.reg["rspbegin"], self.register.reg["rsp"]))
                     self.register.reg["rsp"] -= 8 ## because the invocation call.
+                    
                 if self.IsJtypeInst(self.inst[address_list[self.index]]):
-                    self.JtypeClass.append(self.JmpContext(self.index+1, self.index))
+                    self.JtypeClass.append(jmp_class.JmpContext(self.index+1, self.index, self.register.reg["stack"], self.register.reg["rspbegin"], self.register.reg["rsp"]))
                 self.seenlist.append(self.inst[address_list[self.index]].address)
                 self.edge.add((hex(address_list[self.index]), hex(self.invo_jmp_table[address_list[self.index]])))
                 self.index = address_list.index(self.invo_jmp_table[address_list[self.index]])
                 self.register.reg["call_or_jmp"] = 0 ## clean the call/jmp reg. 
                 log("fastpace with hardcode invocation table.")
             elif address_list[self.index] in self.thread_table:  ### hardcode the thread address.
-                self.retcallpc.append(self.inst[address_list[self.index + 1]].address) ## I assume that it is always call inst.
+                self.JtypeClass.append(jmp_class.JmpContext(self.index+1, self.index, self.register.reg["stack"], self.register.reg["rspbegin"], self.register.reg["rsp"]))
                 self.seenlist.append(self.inst[address_list[self.index]].address)
-                self.edge.add((hex(address_list[self.index]), hex(self.invo_jmp_table[address_list[self.index]])))
+                self.edge.add((hex(address_list[self.index]), hex(self.thread_table[address_list[self.index]])))
                 self.index = address_list.index(self.invo_jmp_table[address_list[self.index]])
                 self.register.reg["rsp"] -= 8 ## because the invocation call.
                 self.register.reg["call_or_jmp"] = 0 ## clean the call/jmp reg. 
                 log("fastpace with hardcode thread table.")
-            elif self.register.reg["call_or_jmp"] == 0:  ## it is not jmp/call inst fetch next instruction
+            elif self.register.reg["call_or_jmp"] == 0:  ## it is not jmp/call inst, try to fetch next instruction
                 if self.inst[self.register.reg["pc"]].id == (X86_INS_RET): ## ret instruction, go to return address.
-                    self.index = address_list.index(self.retcallpc.pop()) if len(self.retcallpc) > 0 else self.index + 1
+                    if len(self.JtypeClass) > 0:
+                            branchnode = self.JtypeClass.pop()
+                            self.index = branchnode.returnPCIndex
+                            self.register.reg["stack"] = branchnode.stack
+                            self.register.reg["rsp"] = branchnode.rsp
+                            self.register.reg["rspbegin"] = branchnode.rspbegin
                 else:
                     if self.check_virtual_return(address_list):
-                        pass
+                        if len(self.JtypeClass) > 0:
+                            branchnode = self.JtypeClass.pop()
+                            self.index = branchnode.returnPCIndex
+                            self.register.reg["stack"] = branchnode.stack
+                            self.register.reg["rsp"] = branchnode.rsp
+                            self.register.reg["rspbegin"] = branchnode.rspbegin
                     else:
                         self.index = self.index + 1
             else:     ## Time to handle Call/Jmp inst if it is not catched by fast pass.
@@ -312,31 +325,51 @@ class parser:
                         logerror("Here is dynamic call")
                         logerror(self.inst[address_list[self.index]].address, self.inst[address_list[self.index]].mnemonic, self.inst[address_list[self.index]].op_str)
                         if self.check_virtual_return(address_list):
-                            pass
+                            if len(self.JtypeClass) > 0:
+                                branchnode = self.JtypeClass.pop()
+                                self.index = branchnode.returnPCIndex
+                                self.register.reg["stack"] = branchnode.stack
+                                self.register.reg["rsp"] = branchnode.rsp
+                                self.register.reg["rspbegin"] = branchnode.rspbegin
                         else:
                             self.index = self.index + 1 
                     elif self.inst[address_list[self.index]].address not in self.seenlist: ## TODO: handle the previous is call or jmp?
-                        self.retcallpc.append(self.inst[address_list[self.index + 1]].address)
+                        # self.retcallpc.append(self.inst[address_list[self.index + 1]].address)
+                        self.JtypeClass.append(jmp_class.JmpContext(self.index+1, self.index, self.register.reg["stack"], self.register.reg["rspbegin"], self.register.reg["rsp"]))
                         self.seenlist.append(self.inst[address_list[self.index]].address)
                         self.index = address_list.index(self.register.reg["pc"])
-                    else: ## TODO: It is seen, time to pop.
-                        pass
-                    self.register.reg["call_or_jmp"] = 0 ## clean the invo reg.        
+                    else: ## It is seen, time to pop.
+                        if len(self.JtypeClass) > 0:
+                            branchnode = self.JtypeClass.pop()
+                            self.index = branchnode.returnPCIndex
+                            self.register.reg["stack"] = branchnode.stack
+                            self.register.reg["rsp"] = branchnode.rsp
+                            self.register.reg["rspbegin"] = branchnode.rspbegin
+                            self.register.reg["call_or_jmp"] = 0 ## clean the invo reg.        
                 else:  ## handle jmp inst, if it is not catched by the fast pass.
                     if self.register.reg["call_or_jmp"] == 2:  ## unknown function pointer or already seen
                         logerror("Here is dynamic jmp")
                         logerror(self.inst[address_list[self.index]].address, self.inst[address_list[self.index]].mnemonic, self.inst[address_list[self.index]].op_str)
                         if self.check_virtual_return(address_list):
-                            pass
+                            if len(self.JtypeClass) > 0:
+                                branchnode = self.JtypeClass.pop()
+                                self.index = branchnode.returnPCIndex
+                                self.register.reg["stack"] = branchnode.stack
+                                self.register.reg["rsp"] = branchnode.rsp
+                                self.register.reg["rspbegin"] = branchnode.rspbegin
                         else:
                             self.index = self.index + 1
                     elif self.inst[address_list[self.index]].address not in self.seenlist: ## handle the while loop of jmp, or seen list
                         self.seenlist.append(self.inst[address_list[self.index]].address)
-                        self.JtypeClass.append(self.JmpContext(self.index+1, self.index))
+                        self.JtypeClass.append(jmp_class.JmpContext(self.index+1, self.index, self.register.reg["stack"], self.register.reg["rspbegin"], self.register.reg["rsp"]))
                         self.index = address_list.index(self.register.reg["pc"])
-                    else: ##@TODO: it is seen, time to pop.
-                        #self.seenlist.remove(self.inst[address_list[self.index]].address)
-                        pass
+                    else: ## it is seen, time to pop.
+                        if len(self.JtypeClass) > 0:
+                            branchnode = self.JtypeClass.pop()
+                            self.index = branchnode.returnPCIndex
+                            self.register.reg["stack"] = branchnode.stack
+                            self.register.reg["rsp"] = branchnode.rsp
+                            self.register.reg["rspbegin"] = branchnode.rspbegin
                     self.register.reg["call_or_jmp"] = 0 ## clean the call/jmp reg.
             ####
             self.register.reg["pc"] = address_list[self.index] ## Setting the pc from index.
@@ -361,6 +394,7 @@ class driver:
         self.register = register.register(self.disassembler.acquire_stack_size)
         self.register.reg["pc"] = self.disassembler.entry_pc
         self.execute = execute.execute(self.register)
+        print(self.disassembler.thread_table)
         self.parser = parser(self.disassembler.symbol, 
                         self.disassembler.inst, 
                         self.register,

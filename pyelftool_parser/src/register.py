@@ -35,6 +35,7 @@ class register:
         self.reg["xmm7"] = 0
         self.reg["enter"] = 0
         self.reg["stack"] = 0
+        self.reg["max"] = 0
         self.reg["call_or_jmp"] = 0 ## spectial reg for fucntion pointer.
     def clean(self):
         self.reg["rax"] = 0
@@ -139,4 +140,8 @@ class register:
         logstack(self.reg["rsp"])
         logstack(self.reg["rspbegin"])
         self.reg["stack"] =  min(self.reg["stack"], self.reg["rsp"] - self.reg["rspbegin"])  ## catch the maximum stack, but I use min because stack is negative.
+        if self.reg["stack"] < self.reg["max"]:
+            self.reg["max"] = self.reg["stack"]
+        if (self.reg["stack"] == -9760):
+                print("minghwu")
         logstack(self.reg["stack"])

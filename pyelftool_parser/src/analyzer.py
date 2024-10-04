@@ -5,6 +5,7 @@ import jmp_class
 import math
 import os
 import re
+import subprocess
 from debug import loginst, log, logresult, logstack, logrust, logerror, logcall
 from capstone.x86 import *
 from elftools.elf.elffile import ELFFile
@@ -20,8 +21,9 @@ class disassembler:
         self.symbol_address = dict()    ## mapping symbol to address
         self.syn_invocation = dict()    ## mapping the synchronization symbol address to target function
         self.invo_jmp_table = dict()    ## hardcode the invocation address for fetching pc 
-        self.thread_table = dict()    ## hardcode the call/jmp for fetching pc 
+        self.thread_list = dict()    ## hardcode the call/jmp for fetching pc 
         self.slm_ipithd_create_address = 0  ## hardcode the thread function for scheduler.
+        self.capmgr_initthd_create_address = 0
         
         self.vertex = dict()            ## construct the calling graph
         self.entry_function = entry_function
@@ -93,8 +95,8 @@ class disassembler:
                 thread_function_list.append(self.slm_ipithd_create_address)
                 
             if inst.address in self.symbol and self.symbol[inst.address] == "capmgr_initthd_create": 
-                self.capmgr_initthd_create = inst.address
-                thread_function_list.append(self.capmgr_initthd_create)
+                self.capmgr_initthd_create_address = inst.address
+                thread_function_list.append(self.capmgr_initthd_create_address)
                 
                 
         flag = 0
@@ -105,7 +107,7 @@ class disassembler:
                 for i in inst.operands:
                     if i.type != X86_OP_MEM and i.type != X86_OP_IMM: ## mean it is not the call instruction we want, because it is memory call.
                         if len(thread_function_list) > 0:
-                            self.thread_table[inst.address] = thread_function_list
+                            self.thread_list= thread_function_list
                             flag = 0
 
     def disasminst(self):  ## decode the inst for execute
@@ -213,7 +215,7 @@ class disassembler:
                 )
     
 class parser:
-    def __init__(self, symbol, inst, register, execute, entry_pc, exit_pc, acquire_stack_address, invo_jmp_table, thread_table, basic_block_mode):
+    def __init__(self, symbol, inst, register, execute, entry_pc, exit_pc, acquire_stack_address, invo_jmp_table, thread_list, basic_block_mode):
         self.symbol = symbol 
         self.inst = inst
         self.stacklist = []
@@ -221,7 +223,7 @@ class parser:
         self.register = register
         self.execute = execute
         self.invo_jmp_table = invo_jmp_table
-        self.thread_table = thread_table
+        self.thread_list = thread_list
         self.edge = set()
         self.vertex = set()
         self.index = 0
@@ -265,9 +267,7 @@ class parser:
                 vertexfrom = self.register.reg["pc"]
                 self.vertex.add(vertexfrom)
                 ######
-            print("pcpcpcp")
-            print(hex(self.register.reg["pc"]))
-            print(self.inst[self.register.reg["pc"]])
+                
             self.execute.exe(self.inst[self.register.reg["pc"]], self.edge, vertexfrom)
             self.register.updatestackreg()
             
@@ -293,11 +293,14 @@ class parser:
                 self.index = address_list.index(self.invo_jmp_table[address_list[self.index]])
                 self.register.reg["call_or_jmp"] = 0 ## clean the call/jmp reg. 
                 log("fastpace with hardcode invocation table.")
-            elif address_list[self.index] in self.thread_table:  ### hardcode the thread address.
-                self.JtypeClass.append(jmp_class.JmpContext(self.index+1, self.index, self.register.reg["stack"], self.register.reg["rspbegin"], self.register.reg["rsp"]))
+            elif address_list[self.index] in self.thread_list:  ### hardcode the thread address.
+                print(self.thread_list)
+                print(hex(address_list[self.index]))
+                self.JtypeClass.append(jmp_class.JmpContext(self.index + 1, self.index, self.register.reg["stack"], self.register.reg["rspbegin"], self.register.reg["rsp"]))
+                for thread_function_address in self.thread_list: ## here is interesting part, self triger self to search
+                    self.JtypeClass.append(jmp_class.JmpContext(address_list.index(thread_function_address), self.index, self.register.reg["stack"], self.register.reg["rspbegin"], self.register.reg["rsp"]))
+                    self.edge.add((hex(address_list[self.index]), thread_function_address))
                 self.seenlist.append(self.inst[address_list[self.index]].address)
-                self.edge.add((hex(address_list[self.index]), hex(self.thread_table[address_list[self.index]])))
-                self.index = address_list.index(self.invo_jmp_table[address_list[self.index]])
                 self.register.reg["rsp"] -= 8 ## because the invocation call.
                 self.register.reg["call_or_jmp"] = 0 ## clean the call/jmp reg. 
                 log("fastpace with hardcode thread table.")
@@ -394,7 +397,6 @@ class driver:
         self.register = register.register(self.disassembler.acquire_stack_size)
         self.register.reg["pc"] = self.disassembler.entry_pc
         self.execute = execute.execute(self.register)
-        print(self.disassembler.thread_table)
         self.parser = parser(self.disassembler.symbol, 
                         self.disassembler.inst, 
                         self.register,
@@ -403,7 +405,7 @@ class driver:
                         self.disassembler.exit_pc, 
                         self.disassembler.acquire_stack_address,
                         self.disassembler.invo_jmp_table,
-                        self.disassembler.thread_table,
+                        self.disassembler.thread_list,
                         basic_block_mode)
     def cleanresult(self): ## remove the custom_acquire_stack function from the result.
         index = 0

@@ -1,9 +1,9 @@
 DEBUG = False
-DEBUGinst = True
-DEBUGresult = True
-DEBUGcall = True
+DEBUGinst = False
+DEBUGresult = False
+DEBUGcall = False
 DEBUGerror = False
-DEBUGstack = True
+DEBUGstack = False
 DEBUGrust = True
 def log(*argv):
     if DEBUG:

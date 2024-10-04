@@ -16,12 +16,12 @@ class Test_TestFunctionSize(unittest.TestCase):
         self.setupmode(0)
         self.driver.run()
         result = self.driver.PowerOf2(abs(min(self.driver.parser.stacklist)))
-        self.assertEqual(13, result)
+        self.assertEqual(14, result)
     def testbasicblock(self):
         self.setupmode(1)
         self.driver.run()
         result = self.driver.PowerOf2(abs(min(self.driver.parser.stacklist)))
-        self.assertEqual(11, result)
+        self.assertEqual(13, result)
 if __name__ == '__main__':
     unittest.main()
     

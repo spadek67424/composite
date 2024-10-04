@@ -290,7 +290,6 @@ class parser:
                 self.register.reg["call_or_jmp"] = 0 ## clean the call/jmp reg. 
                 log("fastpace with hardcode thread table.")
             elif self.register.reg["call_or_jmp"] == 0:  ## it is not jmp/call inst, try to fetch next instruction
-                print("checkpoint")
                 if self.inst[self.register.reg["pc"]].id == (X86_INS_RET): ## ret instruction, go to return address.
                     if len(self.JtypeClass) > 0:
                             branchnode = self.JtypeClass.pop()
@@ -364,8 +363,6 @@ class parser:
                             self.register.reg["rsp"] = branchnode.rsp
                             self.register.reg["rspbegin"] = branchnode.rspbegin   
         
-                    
-                    
             #### commit the instruction.
             self.register.reg["call_or_jmp"] = 0 ## clean the call/jmp reg.
             self.register.updatestackreg()

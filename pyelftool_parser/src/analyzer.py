@@ -266,10 +266,6 @@ class parser:
                 
                 self.stacklist.append(self.register.reg["stack"])
                 
-                if self.basic_block_mode == 1:
-                    self.register.cleanstack() 
-                    self.register.alignrsp() 
-                
                 ###### Graph
                 vertexfrom = self.register.reg["pc"]
                 self.vertex.add(vertexfrom)
@@ -277,7 +273,7 @@ class parser:
             
             
             self.execute.exe(self.inst[self.register.reg["pc"]], self.edge, vertexfrom)
-            self.register.updatestackreg()
+            
             
             
             #### fetch next instruction pc
@@ -384,7 +380,7 @@ class parser:
                             self.register.reg["rsp"] = branchnode.rsp
                             self.register.reg["rspbegin"] = branchnode.rspbegin   
                     self.register.reg["call_or_jmp"] = 0 ## clean the call/jmp reg.
-            
+            self.register.updatestackreg()
             ####
             self.register.reg["pc"] = address_list[self.index] ## Setting the pc from index.
         self.stacklist.append(self.register.reg["stack"])
@@ -417,15 +413,6 @@ class driver:
                         self.disassembler.invo_jmp_table,
                         self.disassembler.thread_list,
                         basic_block_mode)
-    def cleanresult(self): ## remove the custom_acquire_stack function from the result.
-        index = 0
-        
-        for i in self.parser.stackfunction:
-            if i == "custom_acquire_stack":
-                self.parser.stackfunction.remove("custom_acquire_stack")
-                del self.parser.stacklist[index]
-                return
-            index = index + 1
     
     def PowerOf2(self, N):
         # Calculate log2 of N
@@ -460,9 +447,9 @@ class driver:
             logresult(j)
             i = i + 1
         '''
-        stacksize = min(self.parser.stacklist)
-        logresult(stacksize)
-        logrust(self.PowerOf2(abs(stacksize)))
+        logresult(self.register.reg["max"])
+        # logrust(self.PowerOf2(abs(stacksize)))
+        logrust(self.PowerOf2(abs(self.register.reg["max"])))        
 
 if __name__ == '__main__':
     

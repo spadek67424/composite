@@ -140,8 +140,6 @@ class register:
         logstack(self.reg["rsp"])
         logstack(self.reg["rspbegin"])
         self.reg["stack"] =  min(self.reg["stack"], self.reg["rsp"] - self.reg["rspbegin"])  ## catch the maximum stack, but I use min because stack is negative.
-        if self.reg["stack"] < self.reg["max"]:
+        if self.reg["max"] > self.reg["stack"]:
             self.reg["max"] = self.reg["stack"]
-        if (self.reg["stack"] == -9760):
-                print("minghwu")
         logstack(self.reg["stack"])

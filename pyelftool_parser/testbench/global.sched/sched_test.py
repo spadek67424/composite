@@ -6,8 +6,8 @@ import analyzer
 class Test_TestFunctionSize(unittest.TestCase):
     def setUp(self):
         self.entry_function = "__cosrt_upcall_entry"
-        self.path = "./pong.pingpong.global.pong"
-        self.stub_path = "../../../../../src/components/interface/" + "pong" + "/stubs/stubs.S"
+        self.path = "./sched.pfprr_quantum_static.global.sched"
+        self.stub_path = "../../../../../src/components/interface/" + "sched" + "/stubs/stubs.S"
         
     def setupmode(self, basic_block_flag):
         self.driver = analyzer.driver(self.path, self.entry_function, self.stub_path, basic_block_flag)

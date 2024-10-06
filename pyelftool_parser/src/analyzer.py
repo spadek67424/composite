@@ -254,12 +254,14 @@ class parser:
         self.register.updaterip(nextinstRip[self.index + 1 if self.index + 1 in nextinstRip else self.index]) ## catch the rip for memory instruction.
         while(self.register.reg["pc"] != self.exit_pc):
             
+            
             #### execute 
             
             self.execute.exe(self.inst[self.register.reg["pc"]])
-            
+            self.register.updatesmaxstackreg()
             #### fetch next instruction pc and commit
             vertexfrom = address_list[self.index]  ## this is for graph
+            
             if address_list[self.index] in self.seenlist: ## Already seen this address before, going to context switch to last branch.
                 self.seenlist.remove(address_list[self.index])
                 if len(self.JtypeClass) > 0:
@@ -267,7 +269,7 @@ class parser:
                     self.index = branchnode.returnPCIndex
                     self.register.reg["stack"] = branchnode.stack
                     self.register.reg["rsp"] = branchnode.rsp
-                    self.register.reg["rspbegin"] = branchnode.rspbegin
+                    self.register.reg["rspbegin"] = branchnode.rspbegin    
             elif address_list[self.index] in self.invo_jmp_table:  ### hardcode the synchronization table, we jmp to target address.
                 if self.inst[address_list[self.index]].id == X86_INS_CALL:
                     self.JtypeClass.append(jmp_class.JmpContext(self.index+1, self.index, self.register.reg["stack"], self.register.reg["rspbegin"], self.register.reg["rsp"]))
@@ -295,7 +297,6 @@ class parser:
                             self.register.reg["rsp"] = branchnode.rsp
                             self.register.reg["rspbegin"] = branchnode.rspbegin
                 else:
-                    
                     if self.check_virtual_return(address_list):
                         if len(self.JtypeClass) > 0:
                             branchnode = self.JtypeClass.pop()
@@ -359,11 +360,13 @@ class parser:
                             self.index = branchnode.returnPCIndex
                             self.register.reg["stack"] = branchnode.stack
                             self.register.reg["rsp"] = branchnode.rsp
-                            self.register.reg["rspbegin"] = branchnode.rspbegin   
-        
+                            self.register.reg["rspbegin"] = branchnode.rspbegin
+                            
+            
             #### commit the instruction.
+            
             self.register.reg["call_or_jmp"] = 0 ## clean the call/jmp reg.
-            self.register.updatestackreg()
+            self.register.updatesmaxstackreg()
             self.register.reg["pc"] = address_list[self.index]
             if self.register.reg["pc"] in self.symbol:
                 self.stackfunction.append(self.symbol[self.register.reg["pc"]])

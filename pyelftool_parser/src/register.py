@@ -135,7 +135,7 @@ class register:
     def updaterip(self, key):
         if key != -1:
             self.reg["rip"] = key
-    def updatestackreg(self):
+    def updatesmaxstackreg(self):
         logstack("comparison:")
         logstack(self.reg["rsp"])
         logstack(self.reg["rspbegin"])

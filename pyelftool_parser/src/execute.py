@@ -96,6 +96,7 @@ class execute:
                     self.register.Setreg(dst, self.register.Getregwithname(dst) + imm)
                 else:
                     self.register.Setreg(dst, self.register.Getregwithname(dst) + self.register.Getregwithname(src))
+                    
             elif inst.id == (X86_INS_LEA):  ## catch lea instruction
                 self.reg[dst] = src
             elif inst.id == (X86_INS_CALL):  ## catch call instruction

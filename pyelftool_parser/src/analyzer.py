@@ -24,6 +24,7 @@ class disassembler:
         self.thread_list = dict()    ## hardcode the call/jmp for fetching pc 
         self.slm_ipithd_create_address = 0  ## hardcode the thread function for scheduler.
         self.capmgr_initthd_create_address = 0
+        self.function_call_address = 0
         
         self.vertex = dict()            ## construct the calling graph
         self.entry_function = entry_function
@@ -93,12 +94,9 @@ class disassembler:
             if inst.address in self.symbol and self.symbol[inst.address] == "slm_ipithd_create": 
                 self.slm_ipithd_create_address = inst.address
                 thread_function_list.append(self.slm_ipithd_create_address)
-                
             if inst.address in self.symbol and self.symbol[inst.address] == "capmgr_initthd_create": 
                 self.capmgr_initthd_create_address = inst.address
-                thread_function_list.append(self.capmgr_initthd_create_address)
-                
-                
+                thread_function_list.append(self.capmgr_initthd_create_address)                
         flag = 0
         for inst in md.disasm(ops, addr):
             if inst.address in self.symbol and self.symbol[inst.address] == "cos_upcall_fn":
@@ -107,6 +105,7 @@ class disassembler:
                 for i in inst.operands:
                     if i.type != X86_OP_MEM and i.type != X86_OP_IMM: ## mean it is not the call instruction we want, because it is memory call.
                         if len(thread_function_list) > 0:
+                            self.function_call_address = inst.address
                             self.thread_list= thread_function_list
                             flag = 0
 
@@ -215,7 +214,7 @@ class disassembler:
                 )
     
 class parser:
-    def __init__(self, symbol, inst, register, execute, entry_pc, exit_pc, acquire_stack_address, invo_jmp_table, thread_list, basic_block_mode):
+    def __init__(self, symbol, inst, register, execute, entry_pc, exit_pc, acquire_stack_address, invo_jmp_table, thread_list, function_call_address, basic_block_mode):
         self.symbol = symbol 
         self.inst = inst
         self.stacklist = []
@@ -224,6 +223,7 @@ class parser:
         self.execute = execute
         self.invo_jmp_table = invo_jmp_table
         self.thread_list = thread_list
+        self.function_call_address = function_call_address
         self.edge = set()
         self.vertex = set()
         self.index = 0
@@ -260,7 +260,6 @@ class parser:
             
             #### fetch next instruction pc and commit
             vertexfrom = address_list[self.index]  ## this is for graph
-            print(hex(vertexfrom))
             if address_list[self.index] in self.seenlist: ## Already seen this address before, going to context switch to last branch.
                 self.seenlist.remove(address_list[self.index])
                 if len(self.JtypeClass) > 0:
@@ -279,9 +278,7 @@ class parser:
                 self.index = address_list.index(self.invo_jmp_table[address_list[self.index]])
                 self.register.reg["call_or_jmp"] = 0 ## clean the call/jmp reg. 
                 log("fastpace with hardcode invocation table.")
-            elif address_list[self.index] in self.thread_list:  ### hardcode the thread address.
-                print(self.thread_list)
-                print(hex(address_list[self.index]))
+            elif address_list[self.index] == self.function_call_address:  ### hardcode the thread address.
                 self.JtypeClass.append(jmp_class.JmpContext(self.index + 1, self.index, self.register.reg["stack"], self.register.reg["rspbegin"], self.register.reg["rsp"]))
                 for thread_function_address in self.thread_list: ## here is interesting part, self triger self to search
                     self.JtypeClass.append(jmp_class.JmpContext(address_list.index(thread_function_address), self.index, self.register.reg["stack"], self.register.reg["rspbegin"], self.register.reg["rsp"]))
@@ -298,6 +295,7 @@ class parser:
                             self.register.reg["rsp"] = branchnode.rsp
                             self.register.reg["rspbegin"] = branchnode.rspbegin
                 else:
+                    
                     if self.check_virtual_return(address_list):
                         if len(self.JtypeClass) > 0:
                             branchnode = self.JtypeClass.pop()
@@ -399,6 +397,7 @@ class driver:
                         self.disassembler.acquire_stack_address,
                         self.disassembler.invo_jmp_table,
                         self.disassembler.thread_list,
+                        self.disassembler.function_call_address,
                         basic_block_mode)
     
     def PowerOf2(self, N):
@@ -442,7 +441,6 @@ if __name__ == '__main__':
         stub_path = "../../src/components/interface/" + "pong" + "/stubs/stubs.S"
     else:
         stub_path = "../../src/components/interface/" + path.split(".")[-1] + "/stubs/stubs.S"
-    
     driver = driver(path, entry_function, stub_path, basic_block_mode)
     driver.run()
     

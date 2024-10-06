@@ -1,5 +1,5 @@
 DEBUG = False
-DEBUGinst = False
+DEBUGinst = True
 DEBUGresult = True
 DEBUGcall = True
 DEBUGerror = False

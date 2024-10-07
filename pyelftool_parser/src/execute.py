@@ -35,11 +35,6 @@ class execute:
             if (inst.id == X86_INS_FXCH):
                 dst = inst.op_str
                 log(dst)
-            elif (inst.id == X86_INS_LEA):
-                src = inst.op_str.split(",")[1].replace("[","").replace("]","")
-                ## This eval might be buggy because I assume we have only bit 64 register in the ptr for LEA instruction.
-                src = eval(src,self.reg)
-                dst = inst.op_str.split(",")[0]
             else:
                 src = inst.op_str.split(",")[1].replace(" ","")
                 dst = inst.op_str.split(",")[0]
@@ -72,33 +67,17 @@ class execute:
             elif inst.id == (X86_INS_POP): ## catch pop instruction
                 self.reg["rsp"] += 8
             elif inst.id == (X86_INS_MOV):  ## catch mov instruction
-                if flagimm:
-                    self.register.Setreg(dst, imm)
-                else:
-                    self.register.Setregwithregname(dst, src)
-            elif inst.id == (X86_INS_MOVABS):  ## catch mov instruction
-                if flagimm:
-                    self.register.Setreg(dst, imm)   ## @TODO: Do I need this?
-                else:
-                    self.register.Setregwithregname(dst, src)
+                if flagimm and dst == "rsp":
+                    self.register.reg["rsp"] = imm 
             elif inst.id == (X86_INS_SUB):  ## catch sub instruction
-                if flagimm:
-                    self.register.Setreg(dst, self.register.Getregwithname(dst) - imm)
-                else:
-                    self.register.Setreg(dst, self.register.Getregwithname(dst) - self.register.Getregwithname(src))
+                if flagimm and dst == "rsp":
+                    self.register.reg["rsp"] -= imm
             elif inst.id == (X86_INS_AND):  ## catch sub instruction
-                if flagimm:
-                    self.register.Setreg(dst, self.register.Getregwithname(dst) & imm)
-                else:
-                    self.register.Setreg(dst, self.register.Getregwithname(dst) & self.register.Getregwithname(src))
+                if flagimm and dst == "rsp":
+                    self.register.reg["rsp"] &= imm
             elif inst.id == (X86_INS_ADD):  ## catch add instruction
-                if flagimm:
-                    self.register.Setreg(dst, self.register.Getregwithname(dst) + imm)
-                else:
-                    self.register.Setreg(dst, self.register.Getregwithname(dst) + self.register.Getregwithname(src))
-                    
-            elif inst.id == (X86_INS_LEA):  ## catch lea instruction
-                self.reg[dst] = src
+                if flagimm and dst == "rsp":
+                    self.register.reg["rsp"] += imm
             elif inst.id == (X86_INS_CALL):  ## catch call instruction
                 self.reg["rsp"] -= 8
                 if (not flagimm):
@@ -120,7 +99,6 @@ class execute:
                 logcall(hex(inst.address), inst.mnemonic, inst.op_str)
                 self.reg["rsp"] -= imm
                 self.reg["enter"] = imm
-                
             elif inst.id == (X86_INS_LEAVE):  ## catch Leave instruction
                 logcall(hex(inst.address), inst.mnemonic, inst.op_str)
                 self.reg["rsp"] += self.reg["enter"]
@@ -130,39 +108,7 @@ class execute:
             logstack(hex(inst.address), inst.mnemonic, inst.op_str)
             logstack("rsp now is:" + str(self.reg["rsp"]))
             return 0
-        else: ## simulator mode or calculation mode
-            if inst.id == (X86_INS_MOV):  ## catch mov instruction
-                if flagimm:
-                    self.register.Setreg(dst, imm)
-                else:
-                    self.register.Setregwithregname(dst, src)
-            elif inst.id == (X86_INS_MOVABS):  ## catch mov instruction
-                if flagimm:
-                    self.register.Setreg(dst, imm)
-                else:
-                    self.register.Setregwithregname(dst, src)
-            elif inst.id == (X86_INS_MOVABS):  ## catch mov instruction
-                if flagimm:
-                    self.register.Setreg(dst, imm)
-                else: 
-                    self.register.Setregwithregname(dst, src)
-            elif inst.id == (X86_INS_LEA):  ## catch mov instruction
-                self.reg[dst] = src
-            elif inst.id == (X86_INS_SUB):  ## catch sub instruction
-                if flagimm:
-                    self.register.Setreg(dst, self.register.Getregwithname(dst) - imm)
-                else:
-                    self.register.Setreg(dst, self.register.Getregwithname(dst) - self.register.Getregwithname(src))
-            elif inst.id == (X86_INS_AND):  ## catch sub instruction
-                if flagimm:
-                    self.register.Setreg(dst, self.register.Getregwithname(dst) & imm)
-                else:
-                    self.register.Setreg(dst, self.register.Getregwithname(dst) & self.register.Getregwithname(src))
-            elif inst.id == (X86_INS_ADD):  ## catch add instruction
-                if flagimm:
-                     self.register.Setreg(dst, self.register.Getregwithname(dst) + imm)
-                else:
-                    self.register.Setreg(dst, self.register.Getregwithname(dst) + self.register.Getregwithname(src))
+        else: ## Handle the Jtype inst but it is not rsp for call graph.
             if inst.id == (X86_INS_JMP): ## Not yet implement the simulator
                 if (not flagimm):
                     logerror("here is dynamic jmp.")

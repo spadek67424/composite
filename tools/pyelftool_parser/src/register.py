@@ -27,7 +27,6 @@ class register:
         self.reg["stack"] =  min(self.reg["stack"], self.reg["rsp"] - self.reg["rspbegin"])  ## catch the maximum stack, but I use min because stack is negative.
         if self.reg["max"] > self.reg["stack"]:
             self.reg["max"] = self.reg["stack"]
-
         logstack("The stack frame = " + str(self.reg["rspbegin"]))
         logstack("The rsp now is = "+ str(self.reg["rsp"]))
         logstack(self.reg["stack"])

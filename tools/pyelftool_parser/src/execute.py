@@ -50,7 +50,7 @@ class execute:
                 base = inst.reg_name(i.mem.base)
                 disp = i.mem.disp
                 flagmem = 1
-        for r in regs_read:  ## catch the implicity read register of stack
+        for r in regs_read:  ## catch the implicity read register of stack,  @@ TODO: minghwu remove the read might get simpilicity.
             readreg.append(inst.reg_name(r))
             if "rsp" in inst.reg_name(r):
                 flagrsp = 1
@@ -58,6 +58,8 @@ class execute:
             writereg.append(inst.reg_name(r))
             if "rsp" in inst.reg_name(r):
                 flagrsp = 1
+        if flagrsp == 0: ## @@TODO: minghwu catch the flagrsp
+            return 
         ############################################
         ##------------------------------------------
         ## execute stage.

@@ -14,6 +14,8 @@ from capstone import *
 from elftools.elf.sections import (
     NoteSection, SymbolTableSection, SymbolTableIndexSection
 )
+
+## @@ TODO: check the stack status is same when enter/return into/from function, SEE ABI.
 class parser:
     def __init__(self, symbol, inst, register, execute, entry_pc, exit_pc, acquire_stack_address, invo_jmp_table, thread_list, function_call_address):
         self.symbol = symbol 
@@ -223,7 +225,12 @@ class driver:
         self.parser.stack_analyzer()
         
         logresult(self.parser.edge)
+        logresult(self.parser.stackfunction)
+        logresult(self.parser.stacklist)
+    
         logresult(self.register.reg["max"])
+        redzone = 128
+        self.register.reg["max"] = self.register.reg["max"] - redzone
         logrust(self.PowerOf2(abs(self.register.reg["max"])))        
 
 if __name__ == '__main__':
@@ -243,3 +250,10 @@ if __name__ == '__main__':
     driver = driver(path, entry_function, stub_path)
     driver.run()
     
+    ## TODO: we need have case here, said it is not a good result. Like we have a alloc, or dynamic function pointer, or control flow function.
+    ## know the reason why it is not reasonable.
+    ## write a c program or assembly case, test case. make it to fail to make sure we could handle.
+    ## return a function list or call graph of each function could get stack size and call instruction.
+    ## 64 bytes , X86-64 redzone in ABI
+    
+    ## recursion, dynamice pointer, alloca. test case.

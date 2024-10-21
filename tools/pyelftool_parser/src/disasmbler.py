@@ -102,13 +102,32 @@ class disasmbler:
     def disasminst(self):  ## decode the inst for execute
         with open(self.path, 'rb') as f:
             elf = ELFFile(f)
-            code = elf.get_section_by_name('.text')
+            code = elf.get_section_by_name('.text')  ## text section
             ops = code.data()
             addr = code['sh_addr']
             md = Cs(CS_ARCH_X86, CS_MODE_64)
             md.detail = True
             self.disasminstpass(md, ops, addr)      ## disasm the instruction into a list, setting up the entry/exit pc.
             self.disasmthreadpointer(md, ops, addr) ## hardcode the dynamic thread.
+            
+            code = elf.get_section_by_name('.rodata')
+            if code:
+                ops = code.data()
+                addr = code['sh_addr']
+                md = Cs(CS_ARCH_X86, CS_MODE_64)
+                md.detail = True
+                self.disasminstpass(md, ops, addr)      ## disasm the instruction into a list, setting up the entry/exit pc.
+                self.disasmthreadpointer(md, ops, addr) ## hardcode the dynamic thread.
+            
+            
+            code = elf.get_section_by_name('.plt.sec')
+            if code:
+                ops = code.data()
+                addr = code['sh_addr']
+                md = Cs(CS_ARCH_X86, CS_MODE_64)
+                md.detail = True
+                self.disasminstpass(md, ops, addr)      ## disasm the instruction into a list, setting up the entry/exit pc.
+                self.disasmthreadpointer(md, ops, addr) ## hardcode the dynamic thread.
 
     def disasmsymbol(self):
         with open(self.path, 'rb') as f:

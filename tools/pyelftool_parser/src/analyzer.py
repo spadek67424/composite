@@ -62,7 +62,10 @@ class parser:
                 function_now = self.symbol[self.register.reg["pc"]]
                 
             #### execute 
-            self.execute.exe(self.inst[self.register.reg["pc"]])
+            if (self.register.reg["pc"] == -1):
+                self.execute.exe(-1)
+            else:
+                self.execute.exe(self.inst[self.register.reg["pc"]])
             self.register.updatesmaxstackreg()
             
             #### fetch next instruction pc and commit
@@ -74,6 +77,8 @@ class parser:
                     self.register.reg["stack"] = branchnode.stack
                     self.register.reg["rsp"] = branchnode.rsp
                     self.register.reg["rspbegin"] = branchnode.rspbegin
+                else:
+                    self.index = self.index + 1
                     
             elif address_list[self.index] in self.invo_jmp_table:         ## looking up hardcode the synchronization table, we jmp to target address.
                 if self.inst[address_list[self.index]].id == X86_INS_CALL:
@@ -100,11 +105,13 @@ class parser:
             elif self.register.reg["call_or_jmp"] == 0:  ## if it is not jmp/call inst, try to fetch next instruction
                 if self.inst[self.register.reg["pc"]].id == (X86_INS_RET): ## ret instruction, go to return address.
                     if len(self.JtypeClass) > 0:
-                            branchnode = self.JtypeClass.pop()
-                            self.index = branchnode.returnPCIndex
-                            self.register.reg["stack"] = branchnode.stack
-                            self.register.reg["rsp"] = branchnode.rsp
-                            self.register.reg["rspbegin"] = branchnode.rspbegin
+                        branchnode = self.JtypeClass.pop()
+                        self.index = branchnode.returnPCIndex
+                        self.register.reg["stack"] = branchnode.stack
+                        self.register.reg["rsp"] = branchnode.rsp
+                        self.register.reg["rspbegin"] = branchnode.rspbegin
+                    else:
+                        self.index = self.index + 1
                 else:
                     if self.check_exe_virtual_return(address_list, function_now):
                         if len(self.JtypeClass) > 0:
@@ -113,6 +120,8 @@ class parser:
                             self.register.reg["stack"] = branchnode.stack
                             self.register.reg["rsp"] = branchnode.rsp
                             self.register.reg["rspbegin"] = branchnode.rspbegin
+                        else:
+                            self.index = self.index +1
                     else:
                         self.index = self.index + 1
             else:     ## Time to handle Call/Jmp inst if it is not catched by fast pass.
@@ -127,6 +136,8 @@ class parser:
                                 self.register.reg["stack"] = branchnode.stack
                                 self.register.reg["rsp"] = branchnode.rsp
                                 self.register.reg["rspbegin"] = branchnode.rspbegin
+                            else:
+                                self.index = self.index + 1
                         else:
                             self.index = self.index + 1                             
                     elif address_list[self.index] not in self.seenlist:
@@ -144,7 +155,9 @@ class parser:
                             self.register.reg["stack"] = branchnode.stack
                             self.register.reg["rsp"] = branchnode.rsp
                             self.register.reg["rspbegin"] = branchnode.rspbegin
-                            self.register.reg["call_or_jmp"] = 0 ## clean the invo reg.  
+                            self.register.reg["call_or_jmp"] = 0 ## clean the invo reg.
+                        else:
+                            self.index = self.index + 1
                 else:  ## handle jmp inst, if it is not catched by the fast pass.
                     if self.register.reg["call_or_jmp"] == 2:  ## unknown function pointer or already seen
                         logerror("Here is dynamic jmp")
@@ -156,6 +169,8 @@ class parser:
                                 self.register.reg["stack"] = branchnode.stack
                                 self.register.reg["rsp"] = branchnode.rsp
                                 self.register.reg["rspbegin"] = branchnode.rspbegin
+                            else:
+                                self.index = self.index + 1
                         else:
                             self.index = self.index + 1
                     elif address_list[self.index] not in self.seenlist:
@@ -171,17 +186,30 @@ class parser:
                             self.index = branchnode.returnPCIndex
                             self.register.reg["stack"] = branchnode.stack
                             self.register.reg["rsp"] = branchnode.rsp
-                            self.register.reg["rspbegin"] = branchnode.rspbegin               
-            
+                            self.register.reg["rspbegin"] = branchnode.rspbegin
+                        else:
+                            self.index = self.index + 1
             #### commit the instruction.
             self.register.reg["call_or_jmp"] = 0 ## clean the call/jmp reg.
             self.register.updatesmaxstackreg()
             self.register.reg["pc"] = address_list[self.index]
+            if (self.register.reg["pc"] == -1):
+                if len(self.JtypeClass) > 0:
+                    branchnode = self.JtypeClass.pop()
+                    self.index = branchnode.returnPCIndex
+                    self.register.reg["stack"] = branchnode.stack
+                    self.register.reg["rsp"] = branchnode.rsp
+                    self.register.reg["rspbegin"] = branchnode.rspbegin
+                    self.register.reg["call_or_jmp"] = 0 ## clean the invo reg.
+                    self.register.reg["pc"] = address_list[self.index]
+                else:
+                    self.index = self.index + 1
             if self.register.reg["pc"] in self.symbol:
                 self.stackfunction.append(self.symbol[self.register.reg["pc"]])
                 self.stacklist.append(self.register.reg["stack"])
             self.register.updaterip(nextinstRip[self.index + 1 if self.index + 1 in nextinstRip else self.index]) ## catch the rip for memory instruction.
             ########
+            
         return (self.stackfunction,self.stacklist)
 class driver:
     def __init__(self, path, entry_function, stub_path) -> None:

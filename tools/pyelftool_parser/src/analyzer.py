@@ -17,7 +17,7 @@ from elftools.elf.sections import (
 
 ## @@ TODO: check the stack status is same when enter/return into/from function, SEE ABI.
 class parser:
-    def __init__(self, symbol, inst, register, execute, entry_pc, exit_pc, acquire_stack_address, invo_jmp_table, thread_list, function_call_address):
+    def __init__(self, symbol, inst, register, execute, entry_pc, exit_pc, invo_jmp_table, thread_list, function_call_address):
         self.symbol = symbol 
         self.inst = inst
         self.stacklist = []
@@ -34,7 +34,6 @@ class parser:
         self.exit_pc = exit_pc
         self.retjmppc = 0
         self.retjmpflag = 0
-        self.acquire_stack_address = acquire_stack_address
         self.retcallpc = []
         self.seenlist = [] ## handle the while loop jmp.
         self.JtypeClass = []
@@ -205,8 +204,7 @@ class driver:
                         self.register,
                         self.execute,
                         self.disasmbler.entry_pc,
-                        self.disasmbler.exit_pc, 
-                        self.disasmbler.acquire_stack_address,
+                        self.disasmbler.exit_pc,
                         self.disasmbler.invo_jmp_table,
                         self.disasmbler.thread_list,
                         self.disasmbler.function_call_address)

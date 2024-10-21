@@ -124,8 +124,6 @@ class disasmbler:
                         self.entry_pc = symbol['st_value']
                         log("Set up entry point")
                         log(hex(self.entry_pc))
-                    if(symbol.name == 'custom_acquire_stack'):
-                        self.acquire_stack_address = symbol['st_value']
 
     def disasminvocation(self):  ## change the cosrt_extern to cosrt_c_;
         with open(self.path, 'rb') as f:

@@ -58,8 +58,6 @@ class execute:
             writereg.append(inst.reg_name(r))
             if "rsp" in inst.reg_name(r):
                 flagrsp = 1
-        if flagrsp == 0: ## @@TODO: minghwu catch the flagrsp
-            return 
         ############################################
         ##------------------------------------------
         ## execute stage.

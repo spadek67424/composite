@@ -129,6 +129,7 @@ class parser:
                     if self.register.reg["call_or_jmp"] == 2:  ## handle unknown function pointer.
                         logerror("Here is dynamic call")
                         logerror(address_list[self.index], self.inst[address_list[self.index]].mnemonic, self.inst[address_list[self.index]].op_str)
+                        logterminator("ERROR : Dynamic Pointer Detected.")
                         if self.check_exe_virtual_return(address_list, function_now):
                             if len(self.JtypeClass) > 0:
                                 branchnode = self.JtypeClass.pop()
@@ -161,6 +162,7 @@ class parser:
                     if self.register.reg["call_or_jmp"] == 2:  ## unknown function pointer or already seen
                         logerror("Here is dynamic jmp")
                         logerror(address_list[self.index], self.inst[address_list[self.index]].mnemonic, self.inst[address_list[self.index]].op_str)
+                        logterminator("ERROR : Dynamic Pointer Detected.")
                         if self.check_exe_virtual_return(address_list, function_now):
                             if len(self.JtypeClass) > 0:
                                 branchnode = self.JtypeClass.pop()
@@ -177,9 +179,6 @@ class parser:
                         self.JtypeClass.append(jmp_class.JmpContext(self.index+1, self.index, self.register.reg["stack"], self.register.reg["rspbegin"], self.register.reg["rsp"]))
                         if self.register.reg["pc"] in self.symbol:
                             self.edge.add((self.inst_address_to_symbol_name[address_list[self.index]], self.inst_address_to_symbol_name[self.register.reg["pc"]]))
-
-                            print("ddd")
-                            print(function_now)
                         self.index = address_list.index(self.register.reg["pc"])
                     else: ## it is seen, time to pop.
                         self.seenlist.remove(address_list[self.index])

@@ -6,7 +6,7 @@ from capstone import *
 from elftools.elf.sections import (
     NoteSection, SymbolTableSection, SymbolTableIndexSection
 )
-from debug import log
+from debug import log, logterminator
 class disasmbler:
     def __init__(self, path, entry_function):
         self.path = path
@@ -98,7 +98,90 @@ class disasmbler:
                             self.function_call_address = inst.address
                             self.thread_list= thread_function_list
                             flag = 0
+    def stack_alloca_loop_error(self, md, ops, addr):  #### detection of stack allocation loop. Hardcode the lea, sub 0x1000, or, cmp, jne.
+        flaglea = 0                                    #### @@ TODO: minghwu. It is really a pretty bad hardcode, I need to think about it again. 
+        flagsub = 0
+        flagor = 0
+        flagcmp = 0
+        index = 0
+        for inst in md.disasm(ops, addr):
+            if inst.address in self.symbol:
+                flaglea = 0
+                flagsub = 0
+                flagor = 0
+                flagcmp = 0
+                index = 0
+                flagrsp = 0
+            if inst.id == X86_INS_LEA:
+                (regs_read, regs_write) = inst.regs_access()
+                for r in regs_read:  ## catch the implicity read register of stack,  
+                    if "rsp" in inst.reg_name(r):
+                        flagrsp = 1
+                for r in regs_write: ## catch the implicity write register of stack
+                    if "rsp" in inst.reg_name(r):
+                        flagrsp = 1
+                if flagrsp:
+                    flaglea = 1
+            if inst.id == X86_INS_SUB:
+                (regs_read, regs_write) = inst.regs_access()
+                for r in regs_read:  ## catch the implicity read register of stack,  
+                    if "rsp" in inst.reg_name(r):
+                        flagrsp = 1
+                for r in regs_write: ## catch the implicity write register of stack
+                    if "rsp" in inst.reg_name(r):
+                        flagrsp = 1
+                for i in inst.operands:
+                    if i.type == X86_OP_IMM:
+                        imm = i.imm
+                        flagimm = 1
+                if  flaglea and flagrsp and flagimm and imm == 0x1000:
+                    flagsub = 1
+                    index = 1
+                else:
+                    index = 0
+                    flagsub = 0
+                    flagor = 0
+                    flagcmp = 0
+                    index = 0
+            flagrsp = 0
+            if flagsub and inst.id == X86_INS_OR and index == 1:
+                (regs_read, regs_write) = inst.regs_access()
+                for r in regs_read:  ## catch the implicity read register of stack,  
+                    if "rsp" in inst.reg_name(r):
+                        flagrsp = 1
+                for r in regs_write: ## catch the implicity write register of stack
+                    if "rsp" in inst.reg_name(r):
+                        flagrsp = 1
+                if flagrsp:
+                    flagor = 1
+                    index = 2
+                else:
+                    flagsub = 0
+                    flagor = 0
+                    flagcmp = 0
+                    index = 0
 
+            flagrsp = 0
+            if flagor and inst.id == X86_INS_CMP:
+                (regs_read, regs_write) = inst.regs_access()
+                for r in regs_read:  ## catch the implicity read register of stack,
+                    if "rsp" in inst.reg_name(r):
+                        flagrsp = 1
+                for r in regs_write: ## catch the implicity write register of stack
+                    if "rsp" in inst.reg_name(r):
+                        flagrsp = 1
+                if flagrsp:
+                    flagcmp = 1
+                    index = 3
+                else:
+                    flagsub = 0
+                    flagor = 0
+                    flagcmp = 0
+                    index = 0
+            if flagcmp and inst.id == X86_INS_JNE and index == 3:
+                print(hex(inst.address))
+                logterminator("ERROR : Stack Size is not able to be analyzed.")
+            
     def disasminst(self):  ## decode the inst for execute
         with open(self.path, 'rb') as f:
             elf = ELFFile(f)
@@ -109,7 +192,7 @@ class disasmbler:
             md.detail = True
             self.disasminstpass(md, ops, addr)      ## disasm the instruction into a list, setting up the entry/exit pc.
             self.disasmthreadpointer(md, ops, addr) ## hardcode the dynamic thread.
-            
+            self.stack_alloca_loop_error(md, ops, addr)
             code = elf.get_section_by_name('.rodata')
             if code:
                 ops = code.data()
@@ -118,7 +201,7 @@ class disasmbler:
                 md.detail = True
                 self.disasminstpass(md, ops, addr)      ## disasm the instruction into a list, setting up the entry/exit pc.
                 self.disasmthreadpointer(md, ops, addr) ## hardcode the dynamic thread.
-            
+                self.stack_alloca_loop_error(md, ops, addr)
             
             code = elf.get_section_by_name('.plt.sec')
             if code:
@@ -128,7 +211,8 @@ class disasmbler:
                 md.detail = True
                 self.disasminstpass(md, ops, addr)      ## disasm the instruction into a list, setting up the entry/exit pc.
                 self.disasmthreadpointer(md, ops, addr) ## hardcode the dynamic thread.
-
+                self.stack_alloca_loop_error(md, ops, addr)
+                
     def disasmsymbol(self):
         with open(self.path, 'rb') as f:
             e = ELFFile(f)

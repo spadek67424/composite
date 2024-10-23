@@ -1,10 +1,11 @@
 DEBUG = False
-DEBUGinst = False
+DEBUGinst = True
 DEBUGcall = False
 DEBUGerror = False
-DEBUGstack = False
+DEBUGstack = True
 DEBUGresult = True
 DEBUGrust = True
+DEBUGterminator = True
 def log(*argv):
     if DEBUG:
         print(argv)
@@ -25,5 +26,8 @@ def logstack(*argv):
         print(argv)
 def logrust(argv):
     if DEBUGrust:
+        print(argv)
+def logterminator(argv):
+    if DEBUGterminator:
         print(argv)
 

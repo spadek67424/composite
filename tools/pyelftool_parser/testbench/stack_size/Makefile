@@ -2,7 +2,7 @@
 CC = gcc
 
 # Compiler flags
-CFLAGS = -O3 -fno-stack-protector
+CFLAGS = -O3 -fno-stack-check
 
 # Source files
 SRCS = stack_size.c stack_size_other.c

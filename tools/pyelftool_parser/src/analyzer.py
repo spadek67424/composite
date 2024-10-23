@@ -7,7 +7,7 @@ import math
 import os
 import re
 import subprocess
-from debug import loginst, log, logresult, logstack, logrust, logerror, logcall
+from debug import loginst, log, logresult, logstack, logrust, logerror, logcall, logterminator
 from capstone.x86 import *
 from elftools.elf.elffile import ELFFile
 from capstone import *
@@ -17,7 +17,7 @@ from elftools.elf.sections import (
 
 ## @@ TODO: check the stack status is same when enter/return into/from function, SEE ABI.
 class parser:
-    def __init__(self, symbol, inst, register, execute, entry_pc, exit_pc, invo_jmp_table, thread_list, function_call_address):
+    def __init__(self, symbol, inst, register, execute, entry_pc, exit_pc, invo_jmp_table, thread_list, function_call_address, inst_address_to_symbol_name):
         self.symbol = symbol 
         self.inst = inst
         self.stacklist = []
@@ -27,6 +27,7 @@ class parser:
         self.invo_jmp_table = invo_jmp_table
         self.thread_list = thread_list
         self.function_call_address = function_call_address
+        self.inst_address_to_symbol_name = inst_address_to_symbol_name
         self.edge = set()
         self.vertex = set()
         self.index = 0
@@ -58,9 +59,6 @@ class parser:
         self.register.updaterip(nextinstRip[self.index + 1 if self.index + 1 in nextinstRip else self.index]) ## catch the rip for memory instruction.
         function_now = 0
         while(self.register.reg["pc"] != self.exit_pc):
-            if self.register.reg["pc"] in self.symbol:
-                function_now = self.symbol[self.register.reg["pc"]]
-                
             #### execute 
             if (self.register.reg["pc"] == -1):
                 self.execute.exe(-1)
@@ -87,7 +85,7 @@ class parser:
                     self.JtypeClass.append(jmp_class.JmpContext(self.index+1, self.index, self.register.reg["stack"], self.register.reg["rspbegin"], self.register.reg["rsp"]))
                 self.seenlist.append(address_list[self.index])
                 if self.invo_jmp_table[address_list[self.index]] in self.symbol:
-                    self.edge.add((function_now, self.symbol[self.invo_jmp_table[address_list[self.index]]]))
+                    self.edge.add((self.inst_address_to_symbol_name[address_list[self.index]], self.inst_address_to_symbol_name[self.invo_jmp_table[address_list[self.index]]]))
                 self.index = address_list.index(self.invo_jmp_table[address_list[self.index]])
                 self.register.reg["call_or_jmp"] = 0 ## clean the call/jmp indicator. 
                 log("fastpace with hardcode invocation table.")
@@ -97,7 +95,9 @@ class parser:
                 for thread_function_address in self.thread_list:
                     self.JtypeClass.append(jmp_class.JmpContext(address_list.index(thread_function_address), self.index, self.register.reg["stack"], self.register.reg["rspbegin"], self.register.reg["rsp"]))
                     if thread_function_address in self.symbol:
-                        self.edge.add((function_now, self.symbol[thread_function_address]))
+                        self.edge.add((self.inst_address_to_symbol_name[address_list[self.index]], self.inst_address_to_symbol_name[thread_function_address]))
+                        print("bbb")
+                        print(function_now)
                 self.seenlist.append(address_list[self.index])
                 self.register.reg["call_or_jmp"] = 0     ## clean the call/jmp indicator. 
                 log("fastpace with hardcode thread table.")
@@ -144,9 +144,8 @@ class parser:
                         self.JtypeClass.append(jmp_class.JmpContext(self.index+1, self.index, self.register.reg["stack"], self.register.reg["rspbegin"], self.register.reg["rsp"]))
                         self.seenlist.append(address_list[self.index])
                         if self.register.reg["pc"] in self.symbol:
-                            self.edge.add((function_now, self.symbol[self.register.reg["pc"]]))
+                            self.edge.add((self.inst_address_to_symbol_name[address_list[self.index]], self.inst_address_to_symbol_name[self.register.reg["pc"]]))
                         self.index = address_list.index(self.register.reg["pc"])
-                        
                     else: ## It is seen, time to pop.
                         self.seenlist.remove(address_list[self.index])
                         if len(self.JtypeClass) > 0:
@@ -177,7 +176,10 @@ class parser:
                         self.seenlist.append(address_list[self.index])
                         self.JtypeClass.append(jmp_class.JmpContext(self.index+1, self.index, self.register.reg["stack"], self.register.reg["rspbegin"], self.register.reg["rsp"]))
                         if self.register.reg["pc"] in self.symbol:
-                            self.edge.add((function_now, self.symbol[self.register.reg["pc"]]))
+                            self.edge.add((self.inst_address_to_symbol_name[address_list[self.index]], self.inst_address_to_symbol_name[self.register.reg["pc"]]))
+
+                            print("ddd")
+                            print(function_now)
                         self.index = address_list.index(self.register.reg["pc"])
                     else: ## it is seen, time to pop.
                         self.seenlist.remove(address_list[self.index])
@@ -209,8 +211,60 @@ class parser:
                 self.stacklist.append(self.register.reg["stack"])
             self.register.updaterip(nextinstRip[self.index + 1 if self.index + 1 in nextinstRip else self.index]) ## catch the rip for memory instruction.
             ########
-            
         return (self.stackfunction,self.stacklist)
+    
+    def find_cycle_directed(self, edges): ## Try to find Recusion.
+        # Step 1: Build adjacency list from the (From, To) edges
+        graph = {}
+
+        # Create the graph (adjacency list) from the edge list
+        for from_node, to_node in edges:
+            if from_node not in graph:
+                graph[from_node] = []
+            graph[from_node].append(to_node)
+            if to_node not in graph:
+                graph[to_node] = []
+
+        # Step 2: Use DFS to detect cycles and track the nodes involved
+        def dfs(node, visited, rec_stack, path):
+            visited[node] = True
+            rec_stack[node] = True  # mark the node in recursion stack
+            path.append(node)  # track the current path
+
+            # explore neighbors
+            for neighbor in graph[node]:
+                if not visited[neighbor]:
+                    if dfs(neighbor, visited, rec_stack, path):  # cycle found
+                        return True
+                elif rec_stack[neighbor]:  # back edge found (cycle)
+                    # Cycle detected, return the path leading to the cycle
+                    path.append(neighbor)
+                    return True
+
+            rec_stack[node] = False  # remove node from recursion stack
+            path.pop()  # backtrack
+            return False
+
+        # Initialize visited and recursion stack dictionaries
+        visited = {node: False for node in graph}
+        rec_stack = {node: False for node in graph}
+
+        # Track the path and store the cycle nodes
+        path = []
+
+        # Perform DFS on each node that hasn't been visited yet
+        for node in graph:
+            if not visited[node]:
+                if dfs(node, visited, rec_stack, path):
+                    cycle_start = path[-1]  # Get the node where the cycle begins
+                    cycle = []
+                    for n in reversed(path):
+                        cycle.append(n)
+                        if n == cycle_start and len(cycle) > 1:
+                            break
+                    return True, cycle[::-1]  # return the cycle in correct order
+
+        return False, []  # no cycle
 class driver:
     def __init__(self, path, entry_function, stub_path) -> None:
         self.disasmbler = disasmbler.disasmbler(path, entry_function)
@@ -235,7 +289,8 @@ class driver:
                         self.disasmbler.exit_pc,
                         self.disasmbler.invo_jmp_table,
                         self.disasmbler.thread_list,
-                        self.disasmbler.function_call_address)
+                        self.disasmbler.function_call_address,
+                        self.disasmbler.inst_address_to_symbol_name)
     
     def PowerOf2(self, N):
         # Calculate log2 of N
@@ -253,7 +308,9 @@ class driver:
         logresult(self.parser.edge)
         logresult(self.parser.stackfunction)
         logresult(self.parser.stacklist)
-    
+        has_cycle, cycle_nodes = self.parser.find_cycle_directed(self.parser.edge)
+        if has_cycle:
+            logterminator(f"ERROR : Recursion detected. {cycle_nodes}")
         logresult(self.register.reg["max"])
         redzone = 128
         self.register.reg["max"] = self.register.reg["max"] - redzone

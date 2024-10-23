@@ -11,9 +11,10 @@ class disasmbler:
     def __init__(self, path, entry_function):
         self.path = path
         self.inst = dict()                  ## mapping address to inst encoding
-        self.symbol = dict()                ## mapping address to symbol
+        self.symbol = dict()                ## including the symbol's name only.  @@ minghwu these mappings should be able to be optimized.
         self.symbol_address = dict()        ## mapping symbol to address
         self.syn_invocation = dict()        ## mapping the synchronization symbol address to target function
+        self.inst_address_to_symbol_name = dict()  ## mapping the inst address to symbol name
         self.invo_jmp_table = dict()        ## hardcode the invocation address for fetching pc 
         self.thread_list = dict()           ## hardcode the call/jmp for fetching pc 
         self.slm_ipithd_create_address = 0  ## hardcode the thread function for scheduler.
@@ -56,9 +57,13 @@ class disasmbler:
     def disasminstpass(self, md, ops, addr):    ## disasm the instruction into a list, setting up the entry/exit pc.
         pc_flag = 0
         stack_flag = 0
-        
+        function_now = 0
         for inst in md.disasm(ops, addr):
             self.inst[inst.address] = (inst)
+            
+            if inst.address in self.symbol:
+                function_now = self.symbol[inst.address]
+            self.inst_address_to_symbol_name[inst.address] = function_now
             if (inst.address in self.symbol):   ## it is to catch the next symbol start, also for catch the last inst. @minghwu: I think it could have a better way to do this.
                 pc_flag = 0
                 
@@ -77,7 +82,6 @@ class disasmbler:
                     if i.type == X86_OP_IMM:
                         tempstack = i.imm
                 self.acquire_stack_size = tempstack
-    
     def disasmthreadpointer(self, md, ops, addr):
         thread_function_list = list()
         for inst in md.disasm(ops, addr):
@@ -98,7 +102,7 @@ class disasmbler:
                             self.function_call_address = inst.address
                             self.thread_list= thread_function_list
                             flag = 0
-    def stack_alloca_loop_error(self, md, ops, addr):  #### detection of stack allocation loop. Hardcode the lea, sub 0x1000, or, cmp, jne.
+    def stack_alloca_loop_error(self, md, ops, addr):  #### detection of stack allocation loop. Hardcode the lea, sub 0x1000, or, cmp,
         flaglea = 0                                    #### @@ TODO: minghwu. It is really a pretty bad hardcode, I need to think about it again. 
         flagsub = 0
         flagor = 0

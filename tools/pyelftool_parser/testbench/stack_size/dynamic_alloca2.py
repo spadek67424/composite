@@ -5,7 +5,7 @@ import analyzer
 
 class Test_TestFunctionSize(unittest.TestCase):
     def setUp(self):
-        self.entry_function = "should_pass"
+        self.entry_function = "try_alloca2"
         self.path = "./ss.elf"
         self.stub_path = "../../../../../src/components/interface/init/kernel/stubs.S"
         self.driver = analyzer.driver(self.path, self.entry_function, self.stub_path)

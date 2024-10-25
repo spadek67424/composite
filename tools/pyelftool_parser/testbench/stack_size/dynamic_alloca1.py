@@ -5,7 +5,7 @@ import analyzer
 
 class Test_TestFunctionSize(unittest.TestCase):
     def setUp(self):
-        self.entry_function = "should_pass"
+        self.entry_function = "try_alloca"
         self.path = "./ss.elf"
         self.stub_path = "../../../../../src/components/interface/init/kernel/stubs.S"
         self.driver = analyzer.driver(self.path, self.entry_function, self.stub_path)
@@ -13,7 +13,7 @@ class Test_TestFunctionSize(unittest.TestCase):
     def teststacksize(self):
         self.driver.run()
         stack_size = self.driver.register.reg["max"]
-        self.assertEqual(-8360, stack_size)
+        self.assertEqual(-8344, stack_size)
         result = self.driver.PowerOf2(abs(stack_size))
         self.assertEqual(14, result)
         

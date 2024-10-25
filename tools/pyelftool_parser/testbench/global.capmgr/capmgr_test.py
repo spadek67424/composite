@@ -13,8 +13,8 @@ class Test_TestFunctionSize(unittest.TestCase):
     def teststacksize(self):
         self.driver.run()
         stack_size = self.driver.register.reg["max"]
-        self.assertEqual(-10440, stack_size)
-        result = self.driver.PowerOf2(abs(min(self.driver.parser.stacklist)))
+        self.assertEqual(-10568, stack_size)
+        result = self.driver.PowerOf2(abs(stack_size))
         self.assertEqual(14, result)
         
 if __name__ == '__main__':

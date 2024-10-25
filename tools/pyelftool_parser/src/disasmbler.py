@@ -102,7 +102,7 @@ class disasmbler:
                             self.function_call_address = inst.address
                             self.thread_list= thread_function_list
                             flag = 0
-    def stack_alloca_loop_error(self, md, ops, addr):  #### detection of stack allocation loop. Hardcode the lea, sub 0x1000, or, cmp,
+    def check_stack_alloca_loop_error(self, md, ops, addr):  #### detection of stack allocation loop. Hardcode the lea, sub 0x1000, or, cmp,
         flaglea = 0                                    #### @@ TODO: minghwu. It is really a pretty bad hardcode, I need to think about it again. 
         flagsub = 0
         flagor = 0
@@ -184,8 +184,18 @@ class disasmbler:
                     index = 0
             if flagcmp and inst.id == X86_INS_JNE and index == 3:
                 print(hex(inst.address))
-                logterminator("ERROR : Stack Size is not able to be analyzed.")
-            
+                logterminator("ERROR : Stack allocation loop Detected.")
+    def check_dynamic_stack_alloca(self, md, ops, addr):
+        for inst in md.disasm(ops, addr):
+            pattern1 = r"\b([a-zA-Z_]\w*)\s*\*\s*4\s*\+\s*([a-zA-Z_]\w*)\b" ## "(register) * 4 + register"
+            pattern2 = r"\b([a-zA-Z_]\w*)\s*\*\s*4\s*\+\s*(0x[0-9A-Fa-f]+)\b"  ## "(register) * 4 + (0xnumber)"
+            if inst.id == X86_INS_LEA:
+                matches = re.findall(pattern1, inst.op_str)
+                matches2 = re.findall(pattern2, inst.op_str)
+                if matches or matches2:
+                    logterminator("ERROR : Dynamic stack allocation Detected.")
+                
+        
     def disasminst(self):  ## decode the inst for execute
         with open(self.path, 'rb') as f:
             elf = ELFFile(f)
@@ -196,7 +206,10 @@ class disasmbler:
             md.detail = True
             self.disasminstpass(md, ops, addr)      ## disasm the instruction into a list, setting up the entry/exit pc.
             self.disasmthreadpointer(md, ops, addr) ## hardcode the dynamic thread.
-            self.stack_alloca_loop_error(md, ops, addr)
+            self.check_stack_alloca_loop_error(md, ops, addr)
+            self.check_dynamic_stack_alloca(md, ops, addr)
+            
+            
             code = elf.get_section_by_name('.rodata')
             if code:
                 ops = code.data()
@@ -205,7 +218,8 @@ class disasmbler:
                 md.detail = True
                 self.disasminstpass(md, ops, addr)      ## disasm the instruction into a list, setting up the entry/exit pc.
                 self.disasmthreadpointer(md, ops, addr) ## hardcode the dynamic thread.
-                self.stack_alloca_loop_error(md, ops, addr)
+                self.check_stack_alloca_loop_error(md, ops, addr)
+                self.check_dynamic_stack_alloca(md, ops, addr)
             
             code = elf.get_section_by_name('.plt.sec')
             if code:
@@ -215,7 +229,8 @@ class disasmbler:
                 md.detail = True
                 self.disasminstpass(md, ops, addr)      ## disasm the instruction into a list, setting up the entry/exit pc.
                 self.disasmthreadpointer(md, ops, addr) ## hardcode the dynamic thread.
-                self.stack_alloca_loop_error(md, ops, addr)
+                self.check_stack_alloca_loop_error(md, ops, addr)
+                self.check_dynamic_stack_alloca(md, ops, addr)
                 
     def disasmsymbol(self):
         with open(self.path, 'rb') as f:

@@ -57,7 +57,20 @@ int static_array_large(void);
 __attribute__((noinline)) int
 should_pass(void)
 {
+	// this case has stack allocation loop.
 	return call() + tailcall() + static_array() + static_array_large();
+}
+
+__attribute__((noinline)) int
+try_alloca(void)
+{
+	return dynamic_array1(20);
+}
+
+__attribute__((noinline)) int
+try_alloca2(void)
+{
+	return dynamic_array2(20);
 }
 
 int
@@ -65,7 +78,9 @@ main()
 {
 	int a = should_pass();
 	int b = should_fail();
-	printf("%d %d\n", a, b);
+	int c = try_alloca();
+	int d = try_alloca2();
+	printf("%d %d %d %d\n", a, b, c, d);
 
 	return 0;
 }

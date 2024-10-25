@@ -310,9 +310,9 @@ class driver:
         has_cycle, cycle_nodes = self.parser.find_cycle_directed(self.parser.edge)
         if has_cycle:
             logterminator(f"ERROR : Recursion detected. {cycle_nodes}")
-        logresult(self.register.reg["max"])
         redzone = 128
         self.register.reg["max"] = self.register.reg["max"] - redzone
+        logresult(self.register.reg["max"])
         logrust(self.PowerOf2(abs(self.register.reg["max"])))        
 
 if __name__ == '__main__':

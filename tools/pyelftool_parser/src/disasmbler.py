@@ -53,8 +53,25 @@ class disasmbler:
         log("\ncos_asm_stub_indirect functions:")
         for stub_indirect in stub_indirects:
             self.invocation_function.append(stub_indirect)
-
+    def disasmexitpoint(self):
+        with open(self.path, 'rb') as f:
+            elf = ELFFile(f)
+            code = elf.get_section_by_name('.text')
+            ops = code.data()
+            addr = code['sh_addr']
+            md = Cs(CS_ARCH_X86, CS_MODE_64)
+            md.detail = True
+            for inst in md.disasm(ops, addr):
+                if (inst.address in self.symbol):   ## it is to catch the next symbol start, also for catch the last inst. @minghwu: I think it could have a better way to do this.
+                    pc_flag = 0
+                if (inst.address == self.entry_pc): ## when it is entry point, set the flag = 1 to catch exitpoint.
+                    pc_flag = 1
+                if (pc_flag == 1):                  ## catch the point until the next symbol, means it is exit point.
+                    exit_pc = inst.address
+            return exit_pc
+    
     def disasminstpass(self, md, ops, addr):    ## disasm the instruction into a list, setting up the entry/exit pc.
+        
         pc_flag = 0
         stack_flag = 0
         function_now = 0
@@ -69,9 +86,10 @@ class disasmbler:
                 
             if (inst.address == self.entry_pc): ## when it is entry point, set the flag = 1 to catch exitpoint.
                 pc_flag = 1
+                print(self.entry_pc)
             if (pc_flag == 1):                  ## catch the point until the next symbol, means it is exit point.
                 self.exit_pc = inst.address
-            
+                print(self.exit_pc)
             if inst.address in self.symbol and self.symbol[inst.address] == "custom_acquire_stack":  ## try to catch the movabs which is in the acquire_stack function to set rsp.
                 stack_flag = 1
             
@@ -256,7 +274,7 @@ class disasmbler:
                 for symbol in section.iter_symbols():
                     if "__cosrt_s" in symbol.name:
                         if symbol.name.replace("__cosrt_s_", "") in self.invocation_function:
-                            self.entry_function_list.append(symbol.name)
+                            self.entry_function_list.append((symbol.name,self.symbol_address[symbol.name]))
                     
                     if "__cosrt_extern" in symbol.name:
                         if symbol.name.replace("__cosrt_extern_", "") in self.invocation_function:

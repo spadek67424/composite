@@ -279,7 +279,7 @@ class driver:
         log("program stacksize"+ str(self.disasmbler.acquire_stack_size))
         self.register = register.register(self.disasmbler.acquire_stack_size)
         self.register.reg["pc"] = self.disasmbler.entry_pc
-        self.execute = execute.execute(self.register, )
+        self.execute = execute.execute(self.register)
         self.parser = parser(self.disasmbler.symbol, 
                         self.disasmbler.inst, 
                         self.register,
@@ -300,22 +300,51 @@ class driver:
             return a
         
         return a + 1
-
+    def run_all_entrypoint(self):
+        entry_list = self.disasmbler.entry_function_list
+        for entry in entry_list:
+            self.disasmbler.entry_pc = entry[1]
+            self.disasmbler.exit_pc = self.disasmbler.disasmexitpoint()
+            print("program entry:"+ str(self.disasmbler.entry_pc))
+            print("program exit:"+ str(self.disasmbler.exit_pc))
+            log("program stacksize"+ str(self.disasmbler.acquire_stack_size))
+            del self.register
+            del self.execute
+            del self.parser
+            self.register = register.register(self.disasmbler.acquire_stack_size)
+            self.register.reg["pc"] = self.disasmbler.entry_pc
+            self.execute = execute.execute(self.register)
+            self.parser = parser(self.disasmbler.symbol, 
+                            self.disasmbler.inst, 
+                            self.register,
+                            self.execute,
+                            self.disasmbler.entry_pc,
+                            self.disasmbler.exit_pc,
+                            self.disasmbler.invo_jmp_table,
+                            self.disasmbler.thread_list,
+                            self.disasmbler.function_call_address,
+                            self.disasmbler.inst_address_to_symbol_name)
+            self.parser.stack_analyzer()
+            print("HIHIHI")
+            print(self.register.reg["max"])
+            if self.max > self.register.reg["max"]:
+                self.max = self.register.reg["max"]
     def run(self):
         self.parser.stack_analyzer()
-        
         logresult(self.parser.edge)
         logresult(self.parser.stackfunction)
         logresult(self.parser.stacklist)
         has_cycle, cycle_nodes = self.parser.find_cycle_directed(self.parser.edge)
         if has_cycle:
             logterminator(f"ERROR : Recursion detected. {cycle_nodes}")
-        redzone = 128
-        self.register.reg["max"] = self.register.reg["max"] - redzone
         logresult(self.register.reg["max"])
-        logrust(self.PowerOf2(abs(self.register.reg["max"])))        
-
+        self.max = self.register.reg["max"]
+        ## self.max = self.PowerOf2(abs(self.register.reg["max"]))    
+          
+    
+        
 if __name__ == '__main__':
+    flag_all_entry = 1
     
     if len(sys.argv) >=3:
         entry_function = sys.argv[2]
@@ -331,7 +360,12 @@ if __name__ == '__main__':
         stub_path = "../../../src/components/interface/" + path.split(".")[-1] + "/stubs/stubs.S"
     driver = driver(path, entry_function, stub_path)
     driver.run()
+    if flag_all_entry:
+        driver.run_all_entrypoint()
+    redzone = 128
+    driver.max = driver.max - redzone
     
+    logrust(driver.PowerOf2(abs(driver.max)))  
     ## TODO: we need have case here, said it is not a good result. Like we have a alloc, or dynamic function pointer, or control flow function.
     ## know the reason why it is not reasonable.
     ## write a c program or assembly case, test case. make it to fail to make sure we could handle.

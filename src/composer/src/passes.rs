@@ -15,10 +15,12 @@ use std::collections::{BTreeMap, HashMap};
 
 use cossystem::ConstantVal;
 use cossystem::TomlVirtualResource;
-use cossystem::Param;
-use cossystem::Clients;
+use cossystem::CompVirtRes;
+use cossystem::InterfaceToml;
 use initargs::ArgsKV;
 use std::fmt;
+
+use analysis::Warning;
 
 pub struct SystemState {
     spec: String,
@@ -34,6 +36,7 @@ pub struct SystemState {
     constructor: Option<Box<dyn ConstructorPass>>,
     virtual_resource: Option<Box<dyn VirtResPass>>,
     graph: Option<Box<dyn GraphPass>>,
+    analysis: Option<Box<dyn AnalysisPass>>,
 }
 
 impl SystemState {
@@ -50,7 +53,8 @@ impl SystemState {
             objs: HashMap::new(),
             invs: HashMap::new(),
             constructor: None,
-	    graph: None,
+            graph: None,
+            analysis: None,
         }
     }
 
@@ -96,6 +100,10 @@ impl SystemState {
 
     pub fn add_graph(&mut self, c: Box<dyn GraphPass>) {
         self.graph = Some(c);
+    }
+
+    pub fn add_analysis(&mut self, c: Box<dyn AnalysisPass>) {
+        self.analysis = Some(c);
     }
 
     pub fn get_input(&self) -> String {
@@ -145,6 +153,10 @@ impl SystemState {
     pub fn get_graph(&self) -> &dyn GraphPass {
         &**(self.graph.as_ref().unwrap())
     }
+
+    pub fn get_analysis(&self) -> &dyn AnalysisPass {
+        &**(self.analysis.as_ref().unwrap())
+    }
 }
 
 // Note that none of this API does uniqueness checking: if a pass asks
@@ -158,6 +170,7 @@ pub trait BuildState {
         is_rebuild: bool,
         s: &SystemState,
     ) -> Result<(), String>; // must be called *before* the following functions
+    fn set_rebuild_flag(&mut self, is_rebuild: bool);
     fn file_path(&self, file: &String) -> Result<String, String>; // create a path in the build directory for a file
     fn comp_dir_path(&self, c: &ComponentId, state: &SystemState) -> Result<String, String>; // the component's object
     fn comp_file_path(
@@ -171,12 +184,18 @@ pub trait BuildState {
     fn comp_const_header_file(
         &self,
         header_file_path: &String,
+        inter_constants: Option<Vec<ConstantVal>>,
         id: &ComponentId,
         s: &SystemState,
         stack_size: Option<&String>,
     ) -> Result<(), String>; // path of header file of component constants value
 
+<<<<<<< HEAD
     fn comp_build(&self, c: &ComponentId, state: &SystemState, stack_size: Option<&String>) -> Result<String, String>; // build the component, and return the path to the resulting object
+=======
+    fn comp_init_header_file(&self, header_file_path: &String);
+    fn comp_build(&self, c: &ComponentId, state: &SystemState) -> Result<String, String>; // build the component, and return the path to the resulting object
+>>>>>>> e1e1d58e4076efec70ed95cce6cb6d4a53653ede
     fn constructor_build(&self, c: &ComponentId, state: &SystemState) -> Result<String, String>; // build a constructor, including all components it is responsible for booting
     fn kernel_build(
         &self,
@@ -251,10 +270,13 @@ pub struct Component {
     pub constructor: ComponentName, // the constructor that loads this component
     pub scheduler: ComponentName,   // our scheduler (that creates or initial thread)
 
+    pub criticality_level: Option<usize>,
+    pub assurance_level: Option<usize>,
     pub source: String,      // Where is the component source located?
     pub base_vaddr: String, // The lowest virtual address for the component -- could be hex, so not a VAddr
     pub params: Vec<ArgsKV>, // initialization parameters
     pub fsimg: Option<String>,
+    pub virt_res: Vec<CompVirtRes>,
     pub constants: Vec<ConstantVal>,
 }
 
@@ -293,6 +315,7 @@ pub trait SpecificationPass {
     fn libs_named(&self, id: &ComponentName) -> &Vec<Library>;
     fn address_spaces(&self) -> &AddrSpaces;
     fn virtual_resources(&self) -> &HashMap<String, TomlVirtualResource>;
+    fn interface_funcs(&self) -> &HashMap<String, InterfaceToml>;
 }
 
 // Integer namespacing pass. Convert the component variable names to
@@ -374,23 +397,11 @@ pub trait ResPass {
 }
 
 pub type VirtResName = String;
-
-#[derive(Debug, Deserialize)]
-pub struct VirtResWitID {
-    pub virt_resource_id: String,
-    pub param: Param,
-    pub clients: Vec<Clients>,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct VirtualResource {
-    pub name:   String,
-    pub server: String,
-    pub resources:  Vec<VirtResWitID>,
-}
+pub type VirtResId   = usize;
 
 pub trait VirtResPass {
-    fn virt_res_with_id(&self) -> &BTreeMap<VirtResName,VirtualResource>;
+    fn ids(&self) -> &BTreeMap<VirtResId, VirtResName>;
+    fn rmap(&self) -> &BTreeMap<VirtResName, VirtResId>;
 }
 
 // The initparam, objects, and synchronous invocation passes are all
@@ -448,6 +459,8 @@ pub struct SInv {
     pub symb_name: String,
     pub client: ComponentId,
     pub server: ComponentId,
+    pub access: Vec<String>,
+    pub virt_res_type: String,
     pub c_fn_addr: VAddr,
     pub c_callgate_addr: VAddr,
     pub c_ucap_addr: VAddr,
@@ -468,4 +481,9 @@ pub trait ConstructorPass {
 
 pub trait GraphPass {
 
+}
+
+pub trait AnalysisPass {
+    fn warnings(&self) -> &HashMap<ComponentId, Vec<Warning>>;
+    fn warning_str(&self, id: ComponentId, s: &SystemState) -> String;
 }

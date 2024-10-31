@@ -187,7 +187,6 @@ pub trait BuildState {
         inter_constants: Option<Vec<ConstantVal>>,
         id: &ComponentId,
         s: &SystemState,
-        stack_size: Option<&String>,
     ) -> Result<(), String>; // path of header file of component constants value
 
     fn comp_init_header_file(&self, header_file_path: &String);
@@ -221,7 +220,6 @@ pub trait TransitionIter {
         id: &ComponentId,
         s: &SystemState,
         b: &mut dyn BuildState,
-        stack_size: Option<&String>, 
     ) -> Result<Box<Self>, String>;
 }
 

@@ -96,8 +96,6 @@ class parser:
                     self.JtypeClass.append(jmp_class.JmpContext(address_list.index(thread_function_address), self.index, self.register.reg["stack"], self.register.reg["rspbegin"], self.register.reg["rsp"]))
                     if thread_function_address in self.symbol:
                         self.edge.add((self.inst_address_to_symbol_name[address_list[self.index]], self.inst_address_to_symbol_name[thread_function_address]))
-                        print("bbb")
-                        print(function_now)
                 self.seenlist.append(address_list[self.index])
                 self.register.reg["call_or_jmp"] = 0     ## clean the call/jmp indicator. 
                 log("fastpace with hardcode thread table.")

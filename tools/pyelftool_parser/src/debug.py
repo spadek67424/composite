@@ -5,7 +5,7 @@ DEBUGerror = False
 DEBUGstack = False
 DEBUGresult = False
 DEBUGrust = True
-DEBUGterminator = True
+DEBUGterminator = False
 def log(*argv):
     if DEBUG:
         print(argv)

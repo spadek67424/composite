@@ -300,7 +300,10 @@ class driver:
             return a
         
         return a + 1
-
+    def round_up_to_power_of_2(self, n):
+        if n <= 1:
+            return 1
+        return 2 ** math.ceil(math.log2(n))
     def run(self):
         self.parser.stack_analyzer()
         
@@ -313,10 +316,10 @@ class driver:
         redzone = 128
         self.register.reg["max"] = self.register.reg["max"] - redzone
         logresult(self.register.reg["max"])
-        logrust(self.PowerOf2(abs(self.register.reg["max"])))        
+        ## logrust(self.PowerOf2(abs(self.register.reg["max"])))        
+        logrust(self.round_up_to_power_of_2(abs(self.register.reg["max"])))        
 
 if __name__ == '__main__':
-    
     if len(sys.argv) >=3:
         entry_function = sys.argv[2]
     else:

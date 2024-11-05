@@ -90,7 +90,83 @@ class disasmbler:
                 thread_function_list.append(self.slm_ipithd_create_address)
             if inst.address in self.symbol and self.symbol[inst.address] == "capmgr_initthd_create": 
                 self.capmgr_initthd_create_address = inst.address
-                thread_function_list.append(self.capmgr_initthd_create_address)                
+                thread_function_list.append(self.capmgr_initthd_create_address) 
+            if inst.address in self.symbol and self.symbol[inst.address] == "slm_idle":
+                self.slm_idle_address = inst.address
+                thread_function_list.append(self.slm_idle_address)
+
+            if inst.address in self.symbol and self.symbol[inst.address] == "slm_ipi_process":
+                self.slm_ipi_process_address = inst.address
+                thread_function_list.append(self.slm_ipi_process_address)
+
+            if inst.address in self.symbol and self.symbol[inst.address] == "bounceback":
+                self.bounceback_address = inst.address
+                thread_function_list.append(self.bounceback_address)
+
+            if inst.address in self.symbol and self.symbol[inst.address] == "async_thd_parent_perf":
+                self.async_thd_parent_perf_address = inst.address
+                thread_function_list.append(self.async_thd_parent_perf_address)
+
+            if inst.address in self.symbol and self.symbol[inst.address] == "async_thd_parent":
+                self.async_thd_parent_address = inst.address
+                thread_function_list.append(self.async_thd_parent_address)
+
+            if inst.address in self.symbol and self.symbol[inst.address] == "async_thd_fn":
+                self.async_thd_fn_address = inst.address
+                thread_function_list.append(self.async_thd_fn_address)
+
+            if inst.address in self.symbol and self.symbol[inst.address] == "spinner":
+                self.spinner_address = inst.address
+                thread_function_list.append(self.spinner_address)
+
+            if inst.address in self.symbol and self.symbol[inst.address] == "test_thd_arg":
+                self.test_thd_arg_address = inst.address
+                thread_function_list.append(self.test_thd_arg_address)
+
+            if inst.address in self.symbol and self.symbol[inst.address] == "thd_fn_mthds_ring":
+                self.thd_fn_mthds_ring_address = inst.address
+                thread_function_list.append(self.thd_fn_mthds_ring_address)
+
+            if inst.address in self.symbol and self.symbol[inst.address] == "thd_fn_mthds_classic":
+                self.thd_fn_mthds_classic_address = inst.address
+                thread_function_list.append(self.thd_fn_mthds_classic_address)
+
+            if inst.address in self.symbol and self.symbol[inst.address] == "test_thds_reg":
+                self.test_thds_reg_address = inst.address
+                thread_function_list.append(self.test_thds_reg_address)
+
+            if inst.address in self.symbol and self.symbol[inst.address] == "thds_fpu":
+                self.thds_fpu_address = inst.address
+                thread_function_list.append(self.thds_fpu_address)
+
+            if inst.address in self.symbol and self.symbol[inst.address] == "term_fn":
+                self.term_fn_address = inst.address
+                thread_function_list.append(self.term_fn_address)
+
+            if inst.address in self.symbol and self.symbol[inst.address] == "test_rcv_fn":
+                self.test_rcv_fn_address = inst.address
+                thread_function_list.append(self.test_rcv_fn_address)
+
+            if inst.address in self.symbol and self.symbol[inst.address] == "timer_fn":
+                self.timer_fn_address = inst.address
+                thread_function_list.append(self.timer_fn_address)
+
+            if inst.address in self.symbol and self.symbol[inst.address] == "pingpong_fn":
+                self.pingpong_fn_address = inst.address
+                thread_function_list.append(self.pingpong_fn_address)
+
+            if inst.address in self.symbol and self.symbol[inst.address] == "interleave_fn":
+                self.interleave_fn_address = inst.address
+                thread_function_list.append(self.interleave_fn_address)
+
+            if inst.address in self.symbol and self.symbol[inst.address] == "done_fn":
+                self.done_fn_address = inst.address
+                thread_function_list.append(self.done_fn_address)
+
+            if inst.address in self.symbol and self.symbol[inst.address] == "cos_aepthd_fn":
+                self.cos_aepthd_fn_address = inst.address
+                thread_function_list.append(self.cos_aepthd_fn_address)
+        
         flag = 0
         for inst in md.disasm(ops, addr):
             if inst.address in self.symbol and self.symbol[inst.address] == "cos_upcall_fn":

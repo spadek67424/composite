@@ -315,6 +315,7 @@ class driver:
         self.register.reg["max"] = self.register.reg["max"] - redzone
         logresult(self.register.reg["max"])
         ## logrust(self.PowerOf2(abs(self.register.reg["max"])))        
+        ## logrust(abs(self.register.reg["max"]))
         logrust(self.round_up_to_power_of_2(abs(self.register.reg["max"])))        
 
 if __name__ == '__main__':

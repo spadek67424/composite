@@ -82,19 +82,21 @@ class disasmbler:
                     if i.type == X86_OP_IMM:
                         tempstack = i.imm
                 self.acquire_stack_size = tempstack
-    def disasmthreadpointer(self, md, ops, addr):
+    def disasmthreadpointer(self, md, ops, addr):   ## TODO(@minghwu): it is really ugly hardcode. We need to do it in composite to make function pointer to section.
         thread_function_list = list()
         for inst in md.disasm(ops, addr):
             if inst.address in self.symbol and self.symbol[inst.address] == "slm_ipithd_create": 
                 self.slm_ipithd_create_address = inst.address
                 thread_function_list.append(self.slm_ipithd_create_address)
+                
             if inst.address in self.symbol and self.symbol[inst.address] == "capmgr_initthd_create": 
                 self.capmgr_initthd_create_address = inst.address
                 thread_function_list.append(self.capmgr_initthd_create_address) 
+                
             if inst.address in self.symbol and self.symbol[inst.address] == "slm_idle":
                 self.slm_idle_address = inst.address
                 thread_function_list.append(self.slm_idle_address)
-
+                
             if inst.address in self.symbol and self.symbol[inst.address] == "slm_ipi_process":
                 self.slm_ipi_process_address = inst.address
                 thread_function_list.append(self.slm_ipi_process_address)

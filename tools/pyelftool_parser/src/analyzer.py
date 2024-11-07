@@ -5,15 +5,9 @@ import execute
 import jmp_class
 import math
 import os
-import re
-import subprocess
-from debug import loginst, log, logresult, logstack, logrust, logerror, logcall, logterminator
+from debug import log, logresult, logrust, logerror, logterminator
 from capstone.x86 import *
-from elftools.elf.elffile import ELFFile
 from capstone import *
-from elftools.elf.sections import (
-    NoteSection, SymbolTableSection, SymbolTableIndexSection
-)
 
 ## @@ TODO: check the stack status is same when enter/return into/from function, SEE ABI.
 class parser:
@@ -39,7 +33,7 @@ class parser:
         self.seenlist = [] ## handle the while loop jmp.
         self.JtypeClass = []
 
-    def check_exe_virtual_return(self, address_list, function_now): ## virtual ret.
+    def check_exe_virtual_return(self, address_list): ## virtual ret.
         if address_list[self.index + 1] in self.symbol.keys() : ## have a virtual return address for some function does not have ret.
             self.execute.exe(-1)  
             if self.execute.retflag == 1:
@@ -111,7 +105,7 @@ class parser:
                     else:
                         self.index = self.index + 1
                 else:
-                    if self.check_exe_virtual_return(address_list, function_now):
+                    if self.check_exe_virtual_return(address_list):
                         if len(self.JtypeClass) > 0:
                             branchnode = self.JtypeClass.pop()
                             self.index = branchnode.returnPCIndex
@@ -128,7 +122,7 @@ class parser:
                         logerror("Here is dynamic call")
                         logerror(address_list[self.index], self.inst[address_list[self.index]].mnemonic, self.inst[address_list[self.index]].op_str)
                         logterminator("ERROR : Dynamic Pointer Detected.")
-                        if self.check_exe_virtual_return(address_list, function_now):
+                        if self.check_exe_virtual_return(address_list):
                             if len(self.JtypeClass) > 0:
                                 branchnode = self.JtypeClass.pop()
                                 self.index = branchnode.returnPCIndex
@@ -161,7 +155,7 @@ class parser:
                         logerror("Here is dynamic jmp")
                         logerror(address_list[self.index], self.inst[address_list[self.index]].mnemonic, self.inst[address_list[self.index]].op_str)
                         logterminator("ERROR : Dynamic Pointer Detected.")
-                        if self.check_exe_virtual_return(address_list, function_now):
+                        if self.check_exe_virtual_return(address_list):
                             if len(self.JtypeClass) > 0:
                                 branchnode = self.JtypeClass.pop()
                                 self.index = branchnode.returnPCIndex

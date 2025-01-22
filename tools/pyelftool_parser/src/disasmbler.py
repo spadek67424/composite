@@ -44,12 +44,16 @@ class disasmbler:
             stub_indirects = stub_indirect_pattern.findall(content)
 
         # Output the results
-        log("cos_asm_stub functions:")
+        print("cos_asm_stub functions:")
         for stub in stubs:
+            print("dddddd")
+            print(stub)
             self.invocation_function.append(stub)
 
-        log("\ncos_asm_stub_indirect functions:")
+        print("\ncos_asm_stub_indirect functions:")
         for stub_indirect in stub_indirects:
+            print("cccccc")
+            print(stub_indirect)
             self.invocation_function.append(stub_indirect)
     def disasminstpass(self, md, ops, addr):    ## disasm the instruction into a list, setting up the entry/exit pc.
         pc_flag = 0
@@ -332,13 +336,19 @@ class disasmbler:
                             self.entry_function_list.append(symbol.name)
                     
                     if "__cosrt_extern" in symbol.name:
+                        print("aaaaaa")
+                        print(symbol.name)
+                        print(self.invocation_function)
                         if symbol.name.replace("__cosrt_extern_", "") in self.invocation_function:
+                            print("bbbbbbb")
+                            print(symbol.name)
                             if symbol.name.replace("__cosrt_extern", "__cosrt_c") in self.symbol_address.keys():   ## check is there mapping __cosrt_extern_* to __cosrt_c_* invocation
-                                log("invocation to" + symbol.name.replace("__cosrt_extern", "__cosrt_c"))
+                                print("invocation to" + symbol.name.replace("__cosrt_extern", "__cosrt_c"))
+                                print(symbol.name)
                                 self.syn_invocation[symbol['st_value']] =  self.symbol_address[symbol.name.replace("__cosrt_extern", "__cosrt_c")]
                             else:
-                                log("invocation to cosrtdefault")
-                                log(symbol.name)
+                                print("invocation to cosrtdefault")
+                                print(symbol.name)
                                 self.syn_invocation[symbol['st_value']] = self.symbol_address["__cosrt_c_cosrtdefault"]
 
     def disasminvotable(self):  ## hardcode synchronization invocation in a table to jump. 

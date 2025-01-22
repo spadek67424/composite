@@ -316,9 +316,11 @@ class driver:
         self.entry_function = entry_function
         self.stub_path = stub_path
         self.disasmbler = disasmbler.disasmbler(self.path, self.entry_function)
+        print("eeeeeee")
         if os.path.exists(self.stub_path):
+            print("ffffff")
             self.disasmbler.disasmstubs(self.stub_path)
-            self.disasmbler.disasmstubs("/home/minghwu/work/composite/src/components/interface/init/stubs/stubs.S")
+        self.disasmbler.disasmstubs("/home/minghwu/work/composite/src/components/interface/init/stubs/stubs.S")
         self.disasmbler.disasmsymbol()
         self.disasmbler.disasminvocation()
         self.disasmbler.disasminst()
@@ -341,7 +343,7 @@ class driver:
         self.disasmbler = disasmbler.disasmbler(self.path, self.entry_function)
         if os.path.exists(self.stub_path):
             self.disasmbler.disasmstubs(self.stub_path)
-            self.disasmbler.disasmstubs("/home/minghwu/work/composite/src/components/interface/init/stubs/stubs.S")
+        self.disasmbler.disasmstubs("/home/minghwu/work/composite/src/components/interface/init/stubs/stubs.S")
         self.disasmbler.disasmsymbol()
         self.disasmbler.disasminvocation()
         self.disasmbler.disasminst()

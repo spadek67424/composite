@@ -149,7 +149,7 @@ class parser:
                             self.JtypeClass.append(jmp_class.JmpContext(self.index+1, self.index, self.register.reg["stack"], self.register.reg["rspbegin"], self.register.reg["rsp"]))
                             self.seenlist.append(address_list[self.index])
                             self.stackfunction[self.symbol[self.register.reg["pc"]]] = ((self.register.reg["pc"], -1))
-                            if self.register.reg["pc"] in self.symbol and "__cosrt_c" in self.inst_address_to_symbol_name[self.register.reg["pc"]]:
+                            if self.register.reg["pc"] in self.symbol and  "__cosrt_c" in self.inst_address_to_symbol_name[self.register.reg["pc"]]:
                                 self.edge.add_edge(self.inst_address_to_symbol_name[address_list[self.index]], self.inst_address_to_symbol_name[self.register.reg["pc"]])
                             self.index = address_list.index(self.register.reg["pc"])
                     else: ## It is seen, time to pop.
@@ -311,16 +311,12 @@ class parser:
         # Return all cycles as a list
         return [list(cycle) for cycle in cycles]
 class driver:
-    def __init__(self, path, entry_function, stub_path) -> None:
+    def __init__(self, path, entry_function, stub_paths) -> None:
         self.path = path
         self.entry_function = entry_function
-        self.stub_path = stub_path
+        self.stub_paths = stub_paths
         self.disasmbler = disasmbler.disasmbler(self.path, self.entry_function)
-        print("eeeeeee")
-        if os.path.exists(self.stub_path):
-            print("ffffff")
-            self.disasmbler.disasmstubs(self.stub_path)
-        self.disasmbler.disasmstubs("/home/minghwu/work/composite/src/components/interface/init/stubs/stubs.S")
+        self.disasmbler.disasmstubs(self.stub_paths)
         self.disasmbler.disasmsymbol()
         self.disasmbler.disasminvocation()
         self.disasmbler.disasminst()
@@ -341,9 +337,7 @@ class driver:
     def reset(self, entry_function):
         self.entry_function = entry_function
         self.disasmbler = disasmbler.disasmbler(self.path, self.entry_function)
-        if os.path.exists(self.stub_path):
-            self.disasmbler.disasmstubs(self.stub_path)
-        self.disasmbler.disasmstubs("/home/minghwu/work/composite/src/components/interface/init/stubs/stubs.S")
+        self.disasmbler.disasmstubs(self.stub_paths)
         self.disasmbler.disasmsymbol()
         self.disasmbler.disasminvocation()
         self.disasmbler.disasminst()
@@ -386,26 +380,25 @@ class driver:
                 self.stackfunction[key] = dict2[key]
         return self.stackfunction
     # Function to convert a DiGraph to a JSON-serializable format
-    def convert_digraph_to_json_compatible(self, data):
+    def convert_digraph_to_json_compatible(self, data, entry_function):
         output = set()
-        for key, value in data.items():
-            # If the third element of the tuple is a DiGraph, convert it
-            if isinstance(value[2], nx.DiGraph):
-                # Get the node-link representation of the graph
-                node_link_data = nx.node_link_data(value[2])
-
-                # Iterate over the links (edges) in the node-link data
-                for link in node_link_data['links']:
-                    output.add(link['source'])
-                    output.add(link['target'])
-
-                # Replace the third element of the tuple with the output set
-                if len(output) > 0:
-                    data[key] = {"address" : hex(value[0]), "stacksize" : value[1], "dependents" : list(output)}
-                else:
-                    data[key] = {"address" : hex(value[0]), "stacksize" : value[1]}
-        return data
-    def run(self, source_name):
+        result = dict()
+        value = data[entry_function]
+        # If the third element of the tuple is a DiGraph, convert it
+        if isinstance(value[2], nx.DiGraph):
+            # Get the node-link representation of the graph
+            node_link_data = nx.node_link_data(value[2])
+            # Iterate over the links (edges) in the node-link data
+            for link in node_link_data['links']:
+                output.add(link['source'])
+                output.add(link['target'])
+            # Replace the third element of the tuple with the output set
+            if len(output) > 0 :
+                result[entry_function] = {"address" : hex(value[0]), "stacksize" : value[1], "dependents" : list(output)}
+            else:
+                result[entry_function] = {"address" : hex(value[0]), "stacksize" : value[1]}
+        return result
+    def run(self, source_name, entry_function):
         self.parser.stack_analyzer(self.stackfunction)
         try:
             cycles = list(nx.simple_cycles(self.parser.edge))
@@ -446,7 +439,7 @@ class driver:
             logresult(i)
             logresult(self.stackfunction[i])
         # Convert all DiGraph objects in your data
-        converted_data = self.convert_digraph_to_json_compatible(self.stackfunction)
+        converted_data = self.convert_digraph_to_json_compatible(self.stackfunction, entry_function)
 
         # Serialize the converted data to JSON
         ## json_data = json.dumps(converted_data, indent=4)
@@ -464,9 +457,14 @@ if __name__ == '__main__':
         path = sys.argv[1]
     else:
         path = "/home/minghwu/work/composite/tools/pyelftool_parser/testbench/global.pong/pong.pingpong.global.pong"
-    if path.split(".")[-1] == "pong":
-        stub_path = "../../../src/components/interface/" + "pong" + "/stubs/stubs.S"
-    else:
-        stub_path = "../../../src/components/interface/" + path.split(".")[-1] + "/stubs/stubs.S"
-    driver = driver(path, entry_function, stub_path)
-    driver.run(path.split(".")[-1]+entry_function)
+        
+    # Directory to search
+    directory = "/home/minghwu/work/composite/src/components/interface/"
+    stub_name = "stubs.S"
+    stub_paths = []
+    # Traverse the directory
+    for root, dirs, files in os.walk(directory):
+        if stub_name in files:
+            stub_paths.append(os.path.join(root, stub_name))
+    driver = driver(path, entry_function, stub_paths)
+    driver.run(path.split(".")[-1]+entry_function, entry_function)

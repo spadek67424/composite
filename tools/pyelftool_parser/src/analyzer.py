@@ -390,13 +390,15 @@ class driver:
             node_link_data = nx.node_link_data(value[2])
             # Iterate over the links (edges) in the node-link data
             for link in node_link_data['links']:
-                output.add(link['source'])
-                output.add(link['target'])
+                if "cosrt_c" in link['source']:
+                    output.add(link['source'])
+                if "cosrt_c" in link['target']:
+                    output.add(link['target'])
             # Replace the third element of the tuple with the output set
             if len(output) > 0 :
-                result[entry_function] = {"address" : hex(value[0]), "stacksize" : value[1], "dependents" : list(output)}
+                result[entry_function] = {"address" : hex(value[0]), "usize" : abs(value[1]), "dependency" : list(output)}
             else:
-                result[entry_function] = {"address" : hex(value[0]), "stacksize" : value[1]}
+                result[entry_function] = {"address" : hex(value[0]), "usize" : abs(value[1])}
         return result
     def run(self, source_name, entry_function):
         self.parser.stack_analyzer(self.stackfunction)
@@ -444,10 +446,10 @@ class driver:
         # Serialize the converted data to JSON
         ## json_data = json.dumps(converted_data, indent=4)
         # Open a file in write mode and use json.dump() to write data to the file
-        with open("./result/output_"+str(source_name)+".json", "w") as f:
-             json.dump(converted_data, f, indent=4)
+        # with open("./result/output_"+str(source_name)+".json", "w") as f:
+        #     json.dump(converted_data, f, indent=4)
         log("Data has been written to 'output.json'")
-        
+        logrust(json.dumps(converted_data, indent=4))
 if __name__ == '__main__':
     if len(sys.argv) >=3:
         entry_function = sys.argv[2]

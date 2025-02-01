@@ -1,19 +1,19 @@
 use serde_derive::Deserialize;
-use serde_json::{self, Value};
+use serde_json::{self, Value, Map};
 use std::collections::HashMap;
 use std::process::Command;
 
 #[derive(Debug, Deserialize)]
 struct Entry {
     address: String,
-    usize: i32,
+    stacksize: usize,
     #[serde(default)] // Default dependencies is 0 if missing
     dependencies: Vec<String>,
 }
 
 fn main() {
     let binary = "/home/minghwu/work/composite/system_binaries/cos_build-pingpong/global.ping/tests.unit_pingpong.global.ping";
-    let entry_function = "__cosrt_c_pong_subset";
+    let entry_function = "__cosrt_upcall_entry";
     // Execute the Python script
     let output = Command::new("python3")
         .arg("/home/minghwu/work/composite/tools/pyelftool_parser/src/analyzer.py")
@@ -44,27 +44,20 @@ fn main() {
     println!("Raw JSON output:\n{}", stdout);
 
     // Parse JSON dynamically as a HashMap
-    let json_value: HashMap<String, Value> = match serde_json::from_str(&stdout) {
-        Ok(val) => val,
-        Err(e) => {
-            eprintln!("Failed to parse JSON: {}", e);
-            eprintln!("Raw JSON output that caused failure:\n{}", stdout);
-            return;
-        }
-    };
-
+    let json_value: HashMap<String, Entry> = serde_json::from_str(&stdout).expect("Failed to parse JSON");
+    println!("Detected entry name: {:?}", json_value);
     // Find the first key (assuming there's only one top-level entry)
-    if let Some((key, value)) = json_value.into_iter().next() {
-        println!("Detected entry name: {}", key);
+    // if let Some((key, value)) = json_value.into_iter().next() {
+    //     println!("Detected entry name: {}", key);
 
-        // Try to deserialize into `CosrtUpcallEntry`
-        match serde_json::from_value::<CosrtUpcallEntry>(value) {
-            Ok(parsed) => println!("Parsed JSON:\n{:#?}", parsed),
-            Err(e) => {
-                eprintln!("Failed to deserialize into CosrtUpcallEntry: {}", e);
-            }
-        }
-    } else {
-        eprintln!("JSON output is empty or malformed.");
-    }
+    //     // Try to deserialize into `Entry`
+    //     match serde_json::from_value::<Entry>(value) {
+    //         Ok(parsed) => println!("Parsed JSON:\n{:#?}", parsed),
+    //         Err(e) => {
+    //             eprintln!("Failed to deserialize into CosrtUpcallEntry: {}", e);
+    //         }
+    //     }
+    // } else {
+    //     eprintln!("JSON output is empty or malformed.");
+    // }
 }

@@ -379,11 +379,57 @@ class driver:
             if key not in dict1:
                 self.stackfunction[key] = dict2[key]
         return self.stackfunction
-    # Function to convert a DiGraph to a JSON-serializable format
-    def convert_digraph_to_json_compatible(self, data, entry_function):
+    def run(self):
+        self.parser.stack_analyzer(self.stackfunction)
+        try:
+            cycles = list(nx.simple_cycles(self.parser.edge))
+            logterminator("ERROR : Recursion detected.")
+        except:
+            pass
+        redzone = 128
+        self.register.reg["max"] = self.register.reg["max"] - redzone
+        logresult(self.register.reg["max"])
+        logresult(self.disasmbler.entry_pc)
+        self.edge.update(self.parser.edge)  ## here could be faster if we just need the dependency.
+        self.parser.stackfunction[self.entry_function] = ((self.disasmbler.entry_pc, self.register.reg["max"], self.parser.edge)) 
+        print(self.parser.edge.nodes)
+        print(self.parser.edge.edges)
+        self.stackfunction = self.stackfunction | self.parser.stackfunction # Merges the two dicts
+        # keepgoing = 1
+        # while(keepgoing):
+        #     for key, value in self.stackfunction.items():
+        #         if value[1] == -1:  # Check if the second element is -1
+        #             self.reset(key)
+        #             self.parser.stack_analyzer(self.stackfunction)
+        #             try:
+        #                 cycles = list(nx.simple_cycles(self.parser.edge))
+        #                 if len(cycles) > 0:
+        #                     logterminator("ERROR : Recursion detected.")
+        #                     logterminator(cycles)
+        #             except:
+        #                 pass
+        #             self.edge.update(self.parser.edge)
+        #             self.parser.stackfunction[key] = ((self.disasmbler.entry_pc, self.register.reg["max"], self.parser.edge))
+        #             self.stackfunction = self.merge_two_dicts(self.stackfunction, self.parser.stackfunction) # Merges the two dicts
+        #             keepgoing = 1
+        #             break
+        #         else:
+        #             keepgoing = 0
+        #     logresult("key = " + str(key))
+        #     logresult(self.edge.edges)
+        print("final")
+        print(self.edge.nodes)
+        print(self.edge.edges)
+        print(self.stackfunction)
+        # Convert all DiGraph objects in your data
+        return self.stackfunction
+
+# Function to convert a DiGraph to a JSON-serializable format
+def convert_digraph_to_json_compatible(data, entry_function):
+    result = dict()
+    for key in entry_function:
         output = set()
-        result = dict()
-        value = data[entry_function]
+        value = data[key]
         # If the third element of the tuple is a DiGraph, convert it
         if isinstance(value[2], nx.DiGraph):
             # Get the node-link representation of the graph
@@ -396,69 +442,19 @@ class driver:
                     output.add(link['target'])
             # Replace the third element of the tuple with the output set
             if len(output) > 0 :
-                result[entry_function] = {"address" : hex(value[0]), "usize" : abs(value[1]), "dependency" : list(output)}
+                result[key] = {"address" : hex(value[0]), "usize" : abs(value[1]), "dependencies" : list(output)}
             else:
-                result[entry_function] = {"address" : hex(value[0]), "usize" : abs(value[1])}
-        return result
-    def run(self, source_name, entry_function):
-        self.parser.stack_analyzer(self.stackfunction)
-        try:
-            cycles = list(nx.simple_cycles(self.parser.edge))
-            logterminator("ERROR : Recursion detected.")
-        except:
-            pass
-        redzone = 128
-        self.register.reg["max"] = self.register.reg["max"] - redzone
-        logresult(self.register.reg["max"])
-        logresult(self.disasmbler.entry_pc)
-        self.edge.update(self.parser.edge)
-        self.parser.stackfunction[self.entry_function] = ((self.disasmbler.entry_pc, self.register.reg["max"], self.parser.edge))
-        self.stackfunction = self.stackfunction | self.parser.stackfunction # Merges the two dicts
-        keepgoing = 1
-        while(keepgoing):
-            for key, value in self.stackfunction.items():
-                if value[1] == -1:  # Check if the second element is -1
-                    self.reset(key)
-                    self.parser.stack_analyzer(self.stackfunction)
-                    try:
-                        cycles = list(nx.simple_cycles(self.parser.edge))
-                        if len(cycles) > 0:
-                            logterminator("ERROR : Recursion detected.")
-                            logterminator(cycles)
-                    except:
-                        pass
-                    self.edge.update(self.parser.edge)
-                    self.parser.stackfunction[key] = ((self.disasmbler.entry_pc, self.register.reg["max"], self.parser.edge))
-                    self.stackfunction = self.merge_two_dicts(self.stackfunction, self.parser.stackfunction) # Merges the two dicts
-                    keepgoing = 1
-                    break
-                else:
-                    keepgoing = 0
-            logresult("key = " + str(key))
-            logresult(self.edge.edges)
-        logresult(self.stackfunction)
-        for i in self.stackfunction:
-            logresult(i)
-            logresult(self.stackfunction[i])
-        # Convert all DiGraph objects in your data
-        converted_data = self.convert_digraph_to_json_compatible(self.stackfunction, entry_function)
-
-        # Serialize the converted data to JSON
-        ## json_data = json.dumps(converted_data, indent=4)
-        # Open a file in write mode and use json.dump() to write data to the file
-        # with open("./result/output_"+str(source_name)+".json", "w") as f:
-        #     json.dump(converted_data, f, indent=4)
-        log("Data has been written to 'output.json'")
-        logrust(json.dumps(converted_data, indent=4))
+                result[key] = {"address" : hex(value[0]), "usize" : abs(value[1])}
+    return result
 if __name__ == '__main__':
     if len(sys.argv) >=3:
         entry_function = sys.argv[2]
     else:
-        entry_function = "__cosrt_s_pong_ids"
+        entry_function = list(["__cosrt_upcall_entry", "__cosrt_extern_pong_args"])
     if len(sys.argv) >=2:
         path = sys.argv[1]
     else:
-        path = "/home/minghwu/work/composite/tools/pyelftool_parser/testbench/global.pong/pong.pingpong.global.pong"
+        path = "/home/minghwu/work/composite/system_binaries/cos_build-pingpong/global.ping/tests.unit_pingpong.global.ping"
         
     # Directory to search
     directory = "/home/minghwu/work/composite/src/components/interface/"
@@ -468,5 +464,11 @@ if __name__ == '__main__':
     for root, dirs, files in os.walk(directory):
         if stub_name in files:
             stub_paths.append(os.path.join(root, stub_name))
-    driver = driver(path, entry_function, stub_paths)
-    driver.run(path.split(".")[-1]+entry_function, entry_function)
+    graph = dict()
+    for i in entry_function:
+        driver_main = driver(path, i, stub_paths)
+        graph = driver_main.merge_two_dicts(graph, driver_main.run())
+        del driver_main
+    converted_data = convert_digraph_to_json_compatible(graph, entry_function)
+    log("Data has been written to 'output.json'")
+    logrust(json.dumps(converted_data, indent=4))

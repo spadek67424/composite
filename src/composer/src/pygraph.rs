@@ -1,20 +1,20 @@
-use serde_json::{self, Value};
 use std::collections::HashMap;
 use std::process::Command;
+use std::process::exit;
 use passes::{
     BuildState, ComponentId, PyPass, SystemState, TransitionIter,
 };
 
 #[derive(Debug, Deserialize)]
-struct Entry {
+pub struct Entry {
     address: String,
-    usize: i32,
+    stacksize: usize,
     #[serde(default)] // Default dependencies is 0 if missing
     dependencies: Vec<String>,
 }
 
 pub struct PyObject {
-    pygraph: HashMap<String, Value>,
+    pygraph: HashMap<String, Entry>,
 }
 
 impl TransitionIter for PyObject {
@@ -24,12 +24,22 @@ impl TransitionIter for PyObject {
         b: &mut dyn BuildState,
     ) -> Result<Box<Self>, String> {
         let binary = "/home/minghwu/work/composite/system_binaries/cos_build-pingpong/global.ping/tests.unit_pingpong.global.ping";
-        let entry_function = "__cosrt_c_pong_subset";
+        // let entry_function = s.get_objs_id(id).server_symbs().keys().map(|v| format!("{:?}", v)).collect::<Vec<_>>().join(",");
+        let test = s.get_objs_id(id).server_symbs().keys();
+        let mut keys_vec = Vec::new();
+        for i in test {
+            println!("{:#?}", i);
+            println!("ccccccc"); 
+            keys_vec.push(i.clone()); // Convert &String to String
+        }
+        let joined_args = keys_vec.join(" "); // Convert Vec<String> -> "arg1 arg2 arg3 ..."
         // Execute the Python script
+        println!("{:#?}", joined_args);
+        println!("aaaaaaaa");  
         let output = Command::new("python3")
             .arg("/home/minghwu/work/composite/tools/pyelftool_parser/src/analyzer.py")
             .arg(binary)
-            .arg(entry_function)
+            .arg(joined_args)
             .output()
             .map_err(|e| format!("Failed to execute Python script: {}", e))?;
         // Check for script errors
@@ -45,7 +55,7 @@ impl TransitionIter for PyObject {
          .map_err(|e| format!("Invalid UTF-8 output from Python script: {}", e))?;
 
         // Parse JSON dynamically as a HashMap
-        let json_value: HashMap<String, Value> =
+        let json_value: HashMap<String, Entry> =
             serde_json::from_str(&stdout).map_err(|e| {
                 format!(
                     "Failed to parse JSON: {}\nRaw JSON output that caused failure:\n{}",
@@ -58,7 +68,7 @@ impl TransitionIter for PyObject {
 }
 
 impl PyPass for PyObject {
-    fn py_graph(&self) -> &HashMap<String, Value> {
+    fn py_graph(&self) -> &HashMap<String, Entry> {
         &self.pygraph
     }
 }

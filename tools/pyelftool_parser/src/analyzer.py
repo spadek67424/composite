@@ -448,9 +448,14 @@ def convert_digraph_to_json_compatible(data, entry_function):
     return result
 if __name__ == '__main__':
     if len(sys.argv) >=3:
-        entry_function = sys.argv[2]
+        entry_function = sys.argv[2:]
     else:
-        entry_function = list(["__cosrt_upcall_entry", "__cosrt_extern_pong_args"])
+        entry_function = list(["__cosrt_upcall_entry"])
+    print(entry_function)
+    ## error handling.
+    if entry_function == ['']:
+        entry_function = list(["__cosrt_upcall_entry"])
+        
     if len(sys.argv) >=2:
         path = sys.argv[1]
     else:

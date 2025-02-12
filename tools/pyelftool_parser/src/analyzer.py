@@ -392,8 +392,6 @@ class driver:
         logresult(self.disasmbler.entry_pc)
         self.edge.update(self.parser.edge)  ## here could be faster if we just need the dependency.
         self.parser.stackfunction[self.entry_function] = ((self.disasmbler.entry_pc, self.register.reg["max"], self.parser.edge)) 
-        print(self.parser.edge.nodes)
-        print(self.parser.edge.edges)
         self.stackfunction = self.stackfunction | self.parser.stackfunction # Merges the two dicts
         # keepgoing = 1
         # while(keepgoing):
@@ -417,18 +415,18 @@ class driver:
         #             keepgoing = 0
         #     logresult("key = " + str(key))
         #     logresult(self.edge.edges)
-        print("final")
-        print(self.edge.nodes)
-        print(self.edge.edges)
-        print(self.stackfunction)
+        log(self.edge.nodes)
+        log(self.edge.edges)
+        log(self.stackfunction)
         # Convert all DiGraph objects in your data
         return self.stackfunction
 
 # Function to convert a DiGraph to a JSON-serializable format
 def convert_digraph_to_json_compatible(data, entry_function):
-    result = dict()
+    outputlist = []
     for key in entry_function:
-        output = set()
+        result = dict()
+        dependency = set()
         value = data[key]
         # If the third element of the tuple is a DiGraph, convert it
         if isinstance(value[2], nx.DiGraph):
@@ -437,21 +435,27 @@ def convert_digraph_to_json_compatible(data, entry_function):
             # Iterate over the links (edges) in the node-link data
             for link in node_link_data['links']:
                 if "cosrt_c" in link['source']:
-                    output.add(link['source'])
+                    dependency.add(link['source'])
                 if "cosrt_c" in link['target']:
-                    output.add(link['target'])
+                    dependency.add(link['target'])
             # Replace the third element of the tuple with the output set
-            if len(output) > 0 :
-                result[key] = {"address" : hex(value[0]), "usize" : abs(value[1]), "dependencies" : list(output)}
+            if len(dependency) > 0 :
+                result["entry_function"] = key 
+                result["address"] = hex(value[0])
+                result["stacksize"] = abs(value[1])
+                result["dependencies"] = list(dependency)
             else:
-                result[key] = {"address" : hex(value[0]), "usize" : abs(value[1])}
-    return result
+                result["entry_function"] = key 
+                result["address"] = hex(value[0])
+                result["stacksize"] = abs(value[1])
+        outputlist.append(result)
+    return outputlist
 if __name__ == '__main__':
     if len(sys.argv) >=3:
         entry_function = sys.argv[2:]
     else:
-        entry_function = list(["__cosrt_upcall_entry"])
-    print(entry_function)
+        entry_function = list(["__cosrt_upcall_entry", "__cosrt_c_pong_subset"])
+    log(entry_function)
     ## error handling.
     if entry_function == ['']:
         entry_function = list(["__cosrt_upcall_entry"])
@@ -475,5 +479,6 @@ if __name__ == '__main__':
         graph = driver_main.merge_two_dicts(graph, driver_main.run())
         del driver_main
     converted_data = convert_digraph_to_json_compatible(graph, entry_function)
+    print(json.dumps(converted_data, indent=4))
     log("Data has been written to 'output.json'")
     logrust(json.dumps(converted_data, indent=4))

@@ -451,11 +451,12 @@ def convert_digraph_to_json_compatible(data, entry_function):
         outputlist.append(result)
     return outputlist
 if __name__ == '__main__':
+    #### input should be like this :  watch out the " ". It is delicated. 
+    ##  python3 analyzer.py /home/minghwu/work/composite/system_binaries/cos_build-pingpong/global.pong/pong.pingpong.global.pong "__cosrt_s_pong_call,__cosrt_s_cstub_pong_argsrets,__cosrt_s_pong_widerets,__cosrt_s_pong_wideargs,__cosrt_s_pong_argsrets,__cosrt_s_cstub_pong_ids,__cosrt_s_pong_ret,__cosrt_s_cstub_pong_widerets,__cosrt_s_cstub_pong_subset,__cosrt_s_pong_args,__cosrt_s_pong_ids,__cosrt_s_cstub_pong_wideargs,__cosrt_s_pong_arg,__cosrt_s_pong_subset"
     if len(sys.argv) >=3:
-        entry_function = sys.argv[2:]
+        entry_function = list(sys.argv[2].split(","))
     else:
         entry_function = list(["__cosrt_upcall_entry", "__cosrt_c_pong_subset"])
-    log(entry_function)
     ## error handling.
     if entry_function == ['']:
         entry_function = list(["__cosrt_upcall_entry"])
@@ -464,7 +465,7 @@ if __name__ == '__main__':
         path = sys.argv[1]
     else:
         path = "/home/minghwu/work/composite/system_binaries/cos_build-pingpong/global.ping/tests.unit_pingpong.global.ping"
-        
+    # /home/minghwu/work/composite/system_binaries/cos_build-pingpong/global.pong/pong.pingpong.global.pong
     # Directory to search
     directory = "/home/minghwu/work/composite/src/components/interface/"
     stub_name = "stubs.S"
@@ -479,6 +480,5 @@ if __name__ == '__main__':
         graph = driver_main.merge_two_dicts(graph, driver_main.run())
         del driver_main
     converted_data = convert_digraph_to_json_compatible(graph, entry_function)
-    print(json.dumps(converted_data, indent=4))
     log("Data has been written to 'output.json'")
     logrust(json.dumps(converted_data, indent=4))

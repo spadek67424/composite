@@ -7,6 +7,7 @@ use passes::{
 
 #[derive(Debug, Deserialize)]
 pub struct Entry {
+    entry_function: String,
     address: String,
     stacksize: usize,
     #[serde(default)] // Default dependencies is 0 if missing
@@ -23,19 +24,20 @@ impl TransitionIter for PyObject {
         s: &SystemState,
         b: &mut dyn BuildState,
     ) -> Result<Box<Self>, String> {
-        let binary = "/home/minghwu/work/composite/system_binaries/cos_build-pingpong/global.ping/tests.unit_pingpong.global.ping";
-        // let entry_function = s.get_objs_id(id).server_symbs().keys().map(|v| format!("{:?}", v)).collect::<Vec<_>>().join(",");
-        let test = s.get_objs_id(id).server_symbs().keys();
+        let binary = b.comp_obj_path(&id, &s)?;
+        let entry_function = s.get_objs_id(id).server_symbs().keys();
+        // println!("aaaaaaaa");  
+        // println!("{}",binary);
         let mut keys_vec = Vec::new();
-        for i in test {
-            println!("{:#?}", i);
-            println!("ccccccc"); 
-            keys_vec.push(i.clone()); // Convert &String to String
+        for i in entry_function {
+            // println!("{:#?}", i);
+            // println!("ccccccc"); 
+            keys_vec.push("__cosrt_s_".to_owned() + &i.clone()); // Convert &String to String
         }
-        let joined_args = keys_vec.join(" "); // Convert Vec<String> -> "arg1 arg2 arg3 ..."
+        keys_vec.push("__cosrt_upcall_entry".to_owned());
+        let joined_args = keys_vec.join(","); // Convert Vec<String> -> "arg1 arg2 arg3 ..."
         // Execute the Python script
         println!("{:#?}", joined_args);
-        println!("aaaaaaaa");  
         let output = Command::new("python3")
             .arg("/home/minghwu/work/composite/tools/pyelftool_parser/src/analyzer.py")
             .arg(binary)
@@ -55,15 +57,20 @@ impl TransitionIter for PyObject {
          .map_err(|e| format!("Invalid UTF-8 output from Python script: {}", e))?;
 
         // Parse JSON dynamically as a HashMap
-        let json_value: HashMap<String, Entry> =
+        let json_value: Vec<Entry> =
             serde_json::from_str(&stdout).map_err(|e| {
                 format!(
                     "Failed to parse JSON: {}\nRaw JSON output that caused failure:\n{}",
                     e, stdout
                 )
-            })?;    
+            })?;
+        println!("{:#?}", json_value);
+        let pygraph: HashMap<String, Entry> = json_value
+        .into_iter()
+        .map(|entry| (entry.entry_function.clone(), entry))
+        .collect();   
         // Return PyObject wrapped in Box
-        Ok(Box::new(PyObject { pygraph: json_value }))
+        Ok(Box::new(PyObject { pygraph}))
     }
 }
 

@@ -1,6 +1,5 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::process::Command;
-use std::process::exit;
 use passes::{
     BuildState, ComponentId, PyPass, SystemState, TransitionIter,
 };
@@ -14,11 +13,12 @@ pub struct Entry {
     dependencies: Vec<String>,
 }
 
-pub struct PyObject {
+pub struct Pydependency {
     pygraph: HashMap<String, Entry>,
+    pydeps: HashSet<String>,
 }
 
-impl TransitionIter for PyObject {
+impl TransitionIter for Pydependency {
     fn transition_iter(
         id: &ComponentId,
         s: &SystemState,
@@ -37,7 +37,7 @@ impl TransitionIter for PyObject {
         keys_vec.push("__cosrt_upcall_entry".to_owned());
         let joined_args = keys_vec.join(","); // Convert Vec<String> -> "arg1 arg2 arg3 ..."
         // Execute the Python script
-        println!("{:#?}", joined_args);
+        println!("entry_function : {:#?}", joined_args);
         let output = Command::new("python3")
             .arg("/home/minghwu/work/composite/tools/pyelftool_parser/src/analyzer.py")
             .arg(binary)
@@ -64,18 +64,27 @@ impl TransitionIter for PyObject {
                     e, stdout
                 )
             })?;
-        println!("{:#?}", json_value);
         let pygraph: HashMap<String, Entry> = json_value
         .into_iter()
         .map(|entry| (entry.entry_function.clone(), entry))
-        .collect();   
-        // Return PyObject wrapped in Box
-        Ok(Box::new(PyObject { pygraph}))
+        .collect();
+        
+        // Union all dependencies
+        let mut all_dependencies: HashSet<String> = HashSet::new();
+        for entry in pygraph.values() {
+            all_dependencies.extend(entry.dependencies.iter().cloned());
+        }
+        println!("Dependencies: {:#?}", all_dependencies);
+        // Return Pydependency wrapped in Box
+        Ok(Box::new(Pydependency { pygraph, pydeps: all_dependencies }))
     }
 }
 
-impl PyPass for PyObject {
+impl PyPass for Pydependency {
     fn py_graph(&self) -> &HashMap<String, Entry> {
         &self.pygraph
+    }
+    fn py_deps(&self) -> &HashSet<String> {
+        &self.pydeps
     }
 }

@@ -310,7 +310,6 @@ fn compute_elfobj(
             },
         );
     }
-
     Ok(Box::new(ElfObject {
         obj_path: obj_path.to_string(),
         client_symbs,
@@ -329,7 +328,6 @@ impl TransitionIter for ElfObject {
         b: &mut dyn BuildState,
     ) -> Result<Box<Self>, String> {
         let obj_path = b.comp_build(&id, &s)?;
-
         compute_elfobj(&id, &obj_path, &s, b)
     }
 }

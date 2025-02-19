@@ -20,10 +20,12 @@ mod symbols;
 mod syshelpers;
 mod tot_order;
 mod graph;
+mod pygraph;
 
 use address_assignment::AddressAssignmentx86_64;
 use build::DefaultBuilder;
 use compobject::{Constructor, ElfObject};
+use pygraph::Pydependency;
 use cossystem::SystemSpec;
 use initargs::Parameters;
 use invocations::Invocations;
@@ -76,6 +78,7 @@ pub fn exec() -> Result<(), String> {
     for c_id in reverse_ids.iter() {
         sys.add_params_iter(&c_id, Parameters::transition_iter(c_id, &sys, &mut build)?);
         sys.add_objs_iter(&c_id, ElfObject::transition_iter(c_id, &sys, &mut build)?);
+        sys.add_py_iter(&c_id, Pydependency::transition_iter(c_id, &sys, &mut build)?);
         sys.add_invs_iter(&c_id, Invocations::transition_iter(c_id, &sys, &mut build)?);
     }
     sys.add_constructor(Constructor::transition(&sys, &mut build)?);

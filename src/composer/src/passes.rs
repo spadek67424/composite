@@ -445,4 +445,5 @@ pub trait GraphPass {
 pub trait PyPass {
     fn py_graph(&self) -> &HashMap<String, Entry>;
     fn py_deps(&self) -> &std::collections::HashSet<String>;
+    fn py_entry_functions(&self) -> &Vec<String>;
 }

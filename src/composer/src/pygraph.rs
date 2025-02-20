@@ -16,6 +16,7 @@ pub struct Entry {
 pub struct Pydependency {
     pygraph: HashMap<String, Entry>,
     pydeps: HashSet<String>,
+    entry_function: Vec<String>,
 }
 
 impl TransitionIter for Pydependency {
@@ -25,15 +26,8 @@ impl TransitionIter for Pydependency {
         b: &mut dyn BuildState,
     ) -> Result<Box<Self>, String> {
         let binary = b.comp_obj_path(&id, &s)?;
-        let entry_function = s.get_objs_id(id).server_symbs().keys();
-        // println!("aaaaaaaa");  
-        // println!("{}",binary);
+        let entry_function = s.get_graph(&id).py_entry_functions();
         let mut keys_vec = Vec::new();
-        for i in entry_function {
-            // println!("{:#?}", i);
-            // println!("ccccccc"); 
-            keys_vec.push("__cosrt_s_".to_owned() + &i.clone()); // Convert &String to String
-        }
         keys_vec.push("__cosrt_upcall_entry".to_owned());
         let joined_args = keys_vec.join(","); // Convert Vec<String> -> "arg1 arg2 arg3 ..."
         // Execute the Python script
@@ -70,13 +64,15 @@ impl TransitionIter for Pydependency {
         .collect();
         
         // Union all dependencies
+        let mut output_entry : Vec<String> = Vec::new();
         let mut all_dependencies: HashSet<String> = HashSet::new();
         for entry in pygraph.values() {
             all_dependencies.extend(entry.dependencies.iter().cloned());
+            output_entry.push(entry.dependencies.iter().cloned().collect());
         }
         println!("Dependencies: {:#?}", all_dependencies);
         // Return Pydependency wrapped in Box
-        Ok(Box::new(Pydependency { pygraph, pydeps: all_dependencies }))
+        Ok(Box::new(Pydependency { pygraph, pydeps: all_dependencies, entry_function : output_entry }))
     }
 }
 
@@ -86,5 +82,8 @@ impl PyPass for Pydependency {
     }
     fn py_deps(&self) -> &HashSet<String> {
         &self.pydeps
+    }
+    fn py_entry_functions(&self) -> &Vec<String> {
+        &self.entry_function
     }
 }

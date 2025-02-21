@@ -54,6 +54,8 @@ class parser:
     def stack_analyzer(self, lookup_table = None):
         address_list = list(self.inst.keys())  ## a list for instruction address.
         address_list.append(-1) ## dummy value for last iteration.
+        if self.register.reg["pc"] == 0:  ## early return for non exist entry function.
+            return (self.stackfunction,self.stacklist)
         self.index = address_list.index(self.register.reg["pc"]) ## index for each instruction address.
         nextinstRip = list(self.inst.keys())
         nextinstRip.append(-1) ## dummy value for last iteration.

@@ -11,13 +11,12 @@
 /// current state, and transforms it in some way (generating a new
 /// state of the same type). Thus, the linker/loader is simply a set
 /// of these phases composed together.
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, HashMap, HashSet};
 
 use pygraph::Entry;
 use cossystem::ConstantVal;
 use initargs::ArgsKV;
 use std::fmt;
-
 pub struct SystemState {
     spec: String,
 
@@ -199,9 +198,9 @@ pub trait TransitionIter {
         id: &ComponentId,
         s: &SystemState,
         b: &mut dyn BuildState,
+        py_entry: &mut HashMap<ComponentId, HashSet<String>>,
     ) -> Result<Box<Self>, String>;
 }
-
 // What follows is a description of each of the passes and their
 // outputs.
 
@@ -445,5 +444,4 @@ pub trait GraphPass {
 pub trait PyPass {
     fn py_graph(&self) -> &HashMap<String, Entry>;
     fn py_deps(&self) -> &std::collections::HashSet<String>;
-    fn py_entry_functions(&self) -> &Vec<String>;
 }

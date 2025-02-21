@@ -33,8 +33,11 @@ use passes::{BuildState, ComponentId, SystemState, Transition, TransitionIter};
 use properties::CompProperties;
 use resources::ResAssignPass;
 use std::env;
+use std::collections::HashMap;
 use tot_order::CompTotOrd;
 use graph::Graph;
+use std::fs;
+
 
 pub fn exec() -> Result<(), String> {
     let mut args = env::args();
@@ -75,11 +78,12 @@ pub fn exec() -> Result<(), String> {
         .map(|(k, _)| k.clone())
         .rev()
         .collect();
+    let mut py_entry = HashMap::new();
     for c_id in reverse_ids.iter() {
-        sys.add_params_iter(&c_id, Parameters::transition_iter(c_id, &sys, &mut build)?);
-        sys.add_objs_iter(&c_id, ElfObject::transition_iter(c_id, &sys, &mut build)?);
-        sys.add_py_iter(&c_id, Pydependency::transition_iter(c_id, &sys, &mut build)?);
-        sys.add_invs_iter(&c_id, Invocations::transition_iter(c_id, &sys, &mut build)?);
+        sys.add_params_iter(&c_id, Parameters::transition_iter(c_id, &sys, &mut build, &mut py_entry)?);
+        sys.add_objs_iter(&c_id, ElfObject::transition_iter(c_id, &sys, &mut build, &mut py_entry)?);
+        sys.add_py_iter(&c_id, Pydependency::transition_iter(c_id, &sys, &mut build, &mut py_entry)?);
+        sys.add_invs_iter(&c_id, Invocations::transition_iter(c_id, &sys, &mut build, &mut py_entry)?);
     }
     sys.add_constructor(Constructor::transition(&sys, &mut build)?);
     sys.add_graph(Graph::transition(&sys, &mut build)?);
@@ -88,7 +92,12 @@ pub fn exec() -> Result<(), String> {
         "System object generated:\n\t{}",
         sys.get_constructor().image_path()
     );
-
+    let file_path = "entry_function.json";
+    if let Err(e) = fs::remove_file(file_path) {
+        println!("Failed to delete file: {}", e);
+    } else {
+        println!("File deleted successfully!");
+    }
     Ok(())
 }
 

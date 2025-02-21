@@ -1,8 +1,8 @@
 use passes::{
     component, deps, BuildState, ComponentId, InvocationsPass, SInv, SystemState, TransitionIter,
 };
+use std::collections::{HashMap, HashSet};
 
-use crate::pygraph;
 
 pub struct Invocations {
     invs: Vec<SInv>,
@@ -77,6 +77,7 @@ impl TransitionIter for Invocations {
         id: &ComponentId,
         s: &SystemState,
         _b: &mut dyn BuildState,
+        py_entry: &mut HashMap<ComponentId, HashSet<String>>,
     ) -> Result<Box<Self>, String> {
         let curr = s.get_named().ids().get(id).unwrap();
         let mut invs = Vec::new();

@@ -11,12 +11,12 @@
 /// current state, and transforms it in some way (generating a new
 /// state of the same type). Thus, the linker/loader is simply a set
 /// of these phases composed together.
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, HashMap, HashSet};
 
+use pygraph::Entry;
 use cossystem::ConstantVal;
 use initargs::ArgsKV;
 use std::fmt;
-
 pub struct SystemState {
     spec: String,
 
@@ -27,6 +27,7 @@ pub struct SystemState {
     restbls: Option<Box<dyn ResPass>>,
     param: HashMap<ComponentId, Box<dyn InitParamPass>>,
     objs: HashMap<ComponentId, Box<dyn ObjectsPass>>,
+    pygraph: HashMap<ComponentId, Box<dyn PyPass>>,
     invs: HashMap<ComponentId, Box<dyn InvocationsPass>>,
     constructor: Option<Box<dyn ConstructorPass>>,
     graph: Option<Box<dyn GraphPass>>,
@@ -43,9 +44,10 @@ impl SystemState {
             restbls: None,
             param: HashMap::new(),
             objs: HashMap::new(),
+            pygraph: HashMap::new(),
             invs: HashMap::new(),
             constructor: None,
-	    graph: None,
+	        graph: None,
         }
     }
 
@@ -75,6 +77,10 @@ impl SystemState {
 
     pub fn add_objs_iter(&mut self, id: &ComponentId, o: Box<dyn ObjectsPass>) {
         self.objs.insert(*id, o);
+    }
+
+    pub fn add_py_iter(&mut self, id: &ComponentId, p: Box<dyn PyPass>) {
+        self.pygraph.insert(*id, p);
     }
 
     pub fn add_invs_iter(&mut self, id: &ComponentId, i: Box<dyn InvocationsPass>) {
@@ -121,16 +127,16 @@ impl SystemState {
         self.objs.get(id).unwrap().as_ref()
     }
 
+    pub fn get_graph(&self, id: &ComponentId) -> &dyn PyPass {
+        self.pygraph.get(id).unwrap().as_ref()
+    }
+
     pub fn get_invs_id(&self, id: &ComponentId) -> &dyn InvocationsPass {
         self.invs.get(id).unwrap().as_ref()
     }
 
     pub fn get_constructor(&self) -> &dyn ConstructorPass {
         &**(self.constructor.as_ref().unwrap())
-    }
-
-    pub fn get_graph(&self) -> &dyn GraphPass {
-        &**(self.graph.as_ref().unwrap())
     }
 }
 
@@ -192,9 +198,9 @@ pub trait TransitionIter {
         id: &ComponentId,
         s: &SystemState,
         b: &mut dyn BuildState,
+        py_entry: &mut HashMap<ComponentId, HashSet<String>>,
     ) -> Result<Box<Self>, String>;
 }
-
 // What follows is a description of each of the passes and their
 // outputs.
 
@@ -378,12 +384,14 @@ pub trait InitParamPass {
 // The object pass creates the binary for the component, and
 // introspects into it to gather all the relevant cos runtime symbols.
 
+#[derive(Debug)]
 pub struct ClientSymb {
     pub func_addr: VAddr,
     pub callgate_addr: VAddr,
     pub ucap_addr: VAddr,
 }
 
+#[derive(Debug)]
 pub struct ServerSymb {
     pub func_addr: VAddr,
     pub altfn_addr: VAddr,
@@ -432,4 +440,8 @@ pub trait ConstructorPass {
 
 pub trait GraphPass {
 
+}
+pub trait PyPass {
+    fn py_graph(&self) -> &HashMap<String, Entry>;
+    fn py_deps(&self) -> &std::collections::HashSet<String>;
 }

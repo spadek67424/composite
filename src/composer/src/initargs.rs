@@ -1,5 +1,6 @@
 use passes::{component, BuildState, ComponentId, InitParamPass, SystemState, TransitionIter};
 use syshelpers::emit_file;
+use std::collections::{HashMap, HashSet};
 
 #[derive(Debug, Clone)]
 pub enum ArgsValType {
@@ -180,6 +181,7 @@ impl TransitionIter for Parameters {
         id: &ComponentId,
         s: &SystemState,
         b: &mut dyn BuildState,
+        py_entry: &mut HashMap<ComponentId, HashSet<String>>,
     ) -> Result<Box<Self>, String> {
         let argpath = b.comp_file_path(&id, &"initargs.c".to_string(), s)?;
         let mut args = Vec::new();

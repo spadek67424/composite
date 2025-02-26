@@ -1,6 +1,8 @@
 use passes::{
     component, deps, BuildState, ComponentId, InvocationsPass, SInv, SystemState, TransitionIter,
 };
+use std::collections::{HashMap, HashSet};
+
 
 pub struct Invocations {
     invs: Vec<SInv>,
@@ -9,11 +11,16 @@ pub struct Invocations {
 fn sinvs_generate(id: &ComponentId, s: &SystemState) -> Result<Vec<SInv>, String> {
     let mut invs = Vec::new();
     let mut errors = String::from("");
-
+    let pydep = s.get_graph(id).py_deps();
     // find each undefined symbol
     for (sname, symbinfo) in s.get_objs_id(id).client_symbs() {
         let mut found = false;
-
+        if !pydep.contains(&format!("__cosrt_c_{}", sname)) {
+            println!("I am second?");
+            println!("symbinfo: {:?}", symbinfo);
+            println!("sname is not find in pydep: {}", sname);
+            continue;
+        }
         for d in deps(&s, &id) {
             // find the correct dependency (whose interface
             // prefixes the symbol)
@@ -70,10 +77,11 @@ impl TransitionIter for Invocations {
         id: &ComponentId,
         s: &SystemState,
         _b: &mut dyn BuildState,
+        py_entry: &mut HashMap<ComponentId, HashSet<String>>,
     ) -> Result<Box<Self>, String> {
         let curr = s.get_named().ids().get(id).unwrap();
         let mut invs = Vec::new();
-
+        let mut temp = 0;
         for cid in s
             .get_named()
             .ids()
@@ -87,6 +95,9 @@ impl TransitionIter for Invocations {
             // Should be true as constructor relationships should be
             // factored into the component id total order
             assert!(cid > id);
+            println!("gggggg {}", temp);
+            temp += 1;
+            println!("{:#?}", _b.comp_obj_path(&cid, &s)?);
             invs.append(&mut (sinvs_generate(cid, s)?));
         }
 

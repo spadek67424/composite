@@ -7,7 +7,7 @@ use passes::{
     component, BuildState, ClientSymb, CompSymbs, ComponentId, ComponentName, ConstructorPass,
     ObjectsPass, ServerSymb, SystemState, Transition, TransitionIter,
 };
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use symbols::{Symb, SymbType};
 use syshelpers::{dump_file, exec_pipeline};
 
@@ -310,7 +310,6 @@ fn compute_elfobj(
             },
         );
     }
-
     Ok(Box::new(ElfObject {
         obj_path: obj_path.to_string(),
         client_symbs,
@@ -327,9 +326,9 @@ impl TransitionIter for ElfObject {
         id: &ComponentId,
         s: &SystemState,
         b: &mut dyn BuildState,
+        py_entry: &mut HashMap<ComponentId, HashSet<String>>,
     ) -> Result<Box<Self>, String> {
         let obj_path = b.comp_build(&id, &s)?;
-
         compute_elfobj(&id, &obj_path, &s, b)
     }
 }

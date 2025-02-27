@@ -277,6 +277,8 @@ class disasmbler:
                 self.function_call_address.append(inst.address)
             if inst.address in self.symbol and self.symbol[inst.address] == "sched_thd_create":
                 self.function_call_address.append(inst.address)
+        self.thread_list= self.thread_function_list
+        
     def check_stack_alloca_loop_error(self, md, ops, addr):  #### detection of stack allocation loop. Hardcode the lea, sub 0x1000, or, cmp,
         flaglea = 0                                    #### @@ TODO: minghwu. It is really a pretty bad hardcode, I need to think about it again. 
         flagsub = 0

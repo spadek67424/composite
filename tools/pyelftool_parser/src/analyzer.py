@@ -95,17 +95,16 @@ class parser:
                 self.register.reg["call_or_jmp"] = 0   ## clean the call/jmp indicator. 
                 log("fastpace with hardcode invocation table.")
 
-            elif address_list[self.index] in self.function_call_address:  ## looking up hardcode the thread address, and jmp to target address.
-                self.JtypeClass.append(jmp_class.JmpContext(self.index + 1, self.index, self.register.reg["stack"], self.register.reg["rspbegin"], self.register.reg["rsp"]))
-                for thread_function_address in self.thread_list:
-                    self.JtypeClass.append(jmp_class.JmpContext(address_list.index(thread_function_address), self.index, self.register.reg["stack"], self.register.reg["rspbegin"], self.register.reg["rsp"]))
-                    self.index = address_list.index(thread_function_address)
-                    if thread_function_address in self.symbol and "__cosrt_c" in self.inst_address_to_symbol_name[thread_function_address]:
-                        self.edge.add_edge(self.inst_address_to_symbol_name[address_list[self.index]], self.inst_address_to_symbol_name[thread_function_address])
-                self.seenlist.append(address_list[self.index])
-                self.index = self.index + 1
-                self.register.reg["call_or_jmp"] = 0     ## clean the call/jmp indicator. 
-                log("fastpace with hardcode thread table.")
+            # elif address_list[self.index] in self.function_call_address:  ## looking up hardcode the thread address, and jmp to target address.
+            #     self.JtypeClass.append(jmp_class.JmpContext(self.index + 1, self.index, self.register.reg["stack"], self.register.reg["rspbegin"], self.register.reg["rsp"]))
+            #     for thread_function_address in self.thread_list:   ### @@ TODO: Here might be a bug.
+            #         ## self.JtypeClass.append(jmp_class.JmpContext(address_list.index(thread_function_address), self.index, self.register.reg["stack"], self.register.reg["rspbegin"], self.register.reg["rsp"]))
+            #         if thread_function_address in self.symbol and "__cosrt_c" in self.inst_address_to_symbol_name[thread_function_address]:
+            #             self.edge.add_edge(self.inst_address_to_symbol_name[address_list[self.index]], self.inst_address_to_symbol_name[thread_function_address])
+            #     self.seenlist.append(address_list[self.index])
+            #     self.index = self.index + 1
+            #     self.register.reg["call_or_jmp"] = 0     ## clean the call/jmp indicator. 
+            #     log("fastpace with hardcode thread table.")
 
             elif self.register.reg["call_or_jmp"] == 0:  ## if it is not jmp/call inst, try to fetch next instruction
                 if self.inst[self.register.reg["pc"]].id == (X86_INS_RET): ## ret instruction, go to return address.
@@ -480,6 +479,10 @@ if __name__ == '__main__':
         if stub_name in files:
             stub_paths.append(os.path.join(root, stub_name))
     graph = dict()
+    driver_main = driver(path, "__cosrt_upcall_entry", stub_paths)
+    entry_function.append(driver_main.disasmbler.thread_list)
+    print(entry_function)
+    exit()
     for i in entry_function:
         driver_main = driver(path, i, stub_paths)
         graph = driver_main.merge_two_dicts(graph, driver_main.run())

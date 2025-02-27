@@ -11,6 +11,60 @@ from debug import log, logresult, logrust, logerror, logterminator
 from capstone.x86 import *
 from capstone import *
 
+hardcode = list(["capmgr_initthd_create", 
+"slm_idle",
+"slm_ipi_process",
+"bounceback",
+"async_thd_parent_perf",
+"async_thd_parent",
+"async_thd_fn",
+"spinner",
+"test_thd_arg",
+"thd_fn_mthds_ring",
+"thd_fn_mthds_classic",
+"test_thds_reg",
+"thds_fpu",
+"term_fn",
+"test_rcv_fn",
+"timer_fn",
+"pingpong_fn",
+"interleave_fn",
+"done_fn",
+"cos_aepthd_fn",
+"sched_thd_create_closure",
+"vmrt_vm_exception_handler",
+"tmr_lo_thd",
+"tmr_hi_thd",
+"sem_lo_thd",
+"sem_hi_thd",
+"evt_lo_thd",
+"evt_hi_thd",
+"ipi_wakeup",
+"ipi_blocked",
+"chan_reader_thd",
+"chan_writer_thd",
+"client",
+"server",
+"yield_lo_thd",
+"yield_hi_thd",
+"low_thread_fn",
+"high_thread_fn",
+"thd1_fn",
+"thd2_fn",
+"allocator_thread_fn",
+"run_tests",
+"sender",
+"receiver",
+"chan_thd",
+"idle_thd",
+"lock_thd",
+"sem_thd",
+"lock_lo_thd",
+"lock_hi_thd",
+"cos_upcall_fn",
+"sched_thd_create"])
+
+
 class parser:
     def __init__(self, symbol, inst, register, execute, disassembler):
         self.symbol = symbol 
@@ -32,6 +86,7 @@ class parser:
         self.retjmpflag = 0
         self.retcallpc = []
         self.seenlist = [] ## handle the while loop jmp.
+        self.seenthreadlist = []
         self.JtypeClass = []
 
     def check_exe_virtual_return(self, address_list): # virtual ret.
@@ -94,15 +149,16 @@ class parser:
                 self.register.reg["call_or_jmp"] = 0   ## clean the call/jmp indicator. 
                 log("fastpace with hardcode invocation table.")
 
-            elif address_list[self.index] in self.function_call_address:  ## looking up hardcode the thread address, and jmp to target address.
-                self.JtypeClass.append(jmp_class.JmpContext(self.index + 1, self.index, self.register.reg["stack"], self.register.reg["rspbegin"], self.register.reg["rsp"]))
-                for thread_function_address in self.thread_list:
-                    self.JtypeClass.append(jmp_class.JmpContext(address_list.index(thread_function_address), self.index, self.register.reg["stack"], self.register.reg["rspbegin"], self.register.reg["rsp"]))
-                    if thread_function_address in self.symbol and "__cosrt_c" in self.inst_address_to_symbol_name[thread_function_address]:
-                        self.edge.add_edge(self.inst_address_to_symbol_name[address_list[self.index]], self.inst_address_to_symbol_name[thread_function_address])
-                self.seenlist.append(address_list[self.index])
-                self.register.reg["call_or_jmp"] = 0     ## clean the call/jmp indicator. 
-                log("fastpace with hardcode thread table.")
+            # elif address_list[self.index] in self.function_call_address:  ## looking up hardcode the thread address, and jmp to target address.
+            #     self.JtypeClass.append(jmp_class.JmpContext(self.index + 1, self.index, self.register.reg["stack"], self.register.reg["rspbegin"], self.register.reg["rsp"]))
+            #     for thread_function_address in self.thread_list:   ### @@ TODO: Here might be a bug.
+            #         ## self.JtypeClass.append(jmp_class.JmpContext(address_list.index(thread_function_address), self.index, self.register.reg["stack"], self.register.reg["rspbegin"], self.register.reg["rsp"]))
+            #         if thread_function_address in self.symbol and "__cosrt_c" in self.inst_address_to_symbol_name[thread_function_address]:
+            #             self.edge.add_edge(self.inst_address_to_symbol_name[address_list[self.index]], self.inst_address_to_symbol_name[thread_function_address])
+            #     self.seenlist.append(address_list[self.index])
+            #     self.index = self.index + 1
+            #     self.register.reg["call_or_jmp"] = 0     ## clean the call/jmp indicator. 
+            #     log("fastpace with hardcode thread table.")
 
             elif self.register.reg["call_or_jmp"] == 0:  ## if it is not jmp/call inst, try to fetch next instruction
                 if self.inst[self.register.reg["pc"]].id == (X86_INS_RET): ## ret instruction, go to return address.
@@ -477,7 +533,8 @@ if __name__ == '__main__':
         if stub_name in files:
             stub_paths.append(os.path.join(root, stub_name))
     graph = dict()
-    for i in entry_function:
+    entry_function_with_hardcode = entry_function + hardcode
+    for i in entry_function_with_hardcode:
         driver_main = driver(path, i, stub_paths)
         graph = driver_main.merge_two_dicts(graph, driver_main.run())
         del driver_main

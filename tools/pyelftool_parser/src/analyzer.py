@@ -99,6 +99,7 @@ class parser:
                 self.JtypeClass.append(jmp_class.JmpContext(self.index + 1, self.index, self.register.reg["stack"], self.register.reg["rspbegin"], self.register.reg["rsp"]))
                 for thread_function_address in self.thread_list:
                     self.JtypeClass.append(jmp_class.JmpContext(address_list.index(thread_function_address), self.index, self.register.reg["stack"], self.register.reg["rspbegin"], self.register.reg["rsp"]))
+                    self.index = address_list.index(thread_function_address)
                     if thread_function_address in self.symbol and "__cosrt_c" in self.inst_address_to_symbol_name[thread_function_address]:
                         self.edge.add_edge(self.inst_address_to_symbol_name[address_list[self.index]], self.inst_address_to_symbol_name[thread_function_address])
                 self.seenlist.append(address_list[self.index])

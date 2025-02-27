@@ -19,7 +19,7 @@ class disasmbler:
         self.thread_list = dict()           ## hardcode the call/jmp for fetching pc 
         self.slm_ipithd_create_address = 0  ## hardcode the thread function for scheduler.
         self.capmgr_initthd_create_address = 0
-        self.function_call_address = 0
+        self.function_call_address = list()
         self.entry_function = entry_function
         self.entry_function_list = list()   ## need to put the cosrt_s into it.
         self.entry_pc = 0
@@ -269,9 +269,12 @@ class disasmbler:
                 for i in inst.operands:
                     if i.type != X86_OP_MEM and i.type != X86_OP_IMM: ## mean it is not the call instruction we want, because it is memory call.
                         if len(thread_function_list) > 0:
-                            self.function_call_address = inst.address
+                            self.function_call_address.append(inst.address)
                             self.thread_list= thread_function_list
                             flag = 0
+        for inst in md.disasm(ops, addr):
+            if inst.address in self.symbol and self.symbol[inst.address] == "sched_thd_create":
+                self.function_call_address.append(inst.address)
     def check_stack_alloca_loop_error(self, md, ops, addr):  #### detection of stack allocation loop. Hardcode the lea, sub 0x1000, or, cmp,
         flaglea = 0                                    #### @@ TODO: minghwu. It is really a pretty bad hardcode, I need to think about it again. 
         flagsub = 0

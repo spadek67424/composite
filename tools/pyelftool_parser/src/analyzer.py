@@ -94,7 +94,7 @@ class parser:
                 self.register.reg["call_or_jmp"] = 0   ## clean the call/jmp indicator. 
                 log("fastpace with hardcode invocation table.")
 
-            elif address_list[self.index] == self.function_call_address:  ## looking up hardcode the thread address, and jmp to target address.
+            elif address_list[self.index] in self.function_call_address:  ## looking up hardcode the thread address, and jmp to target address.
                 self.JtypeClass.append(jmp_class.JmpContext(self.index + 1, self.index, self.register.reg["stack"], self.register.reg["rspbegin"], self.register.reg["rsp"]))
                 for thread_function_address in self.thread_list:
                     self.JtypeClass.append(jmp_class.JmpContext(address_list.index(thread_function_address), self.index, self.register.reg["stack"], self.register.reg["rspbegin"], self.register.reg["rsp"]))

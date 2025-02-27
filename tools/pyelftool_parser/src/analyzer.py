@@ -534,7 +534,7 @@ if __name__ == '__main__':
             stub_paths.append(os.path.join(root, stub_name))
     graph = dict()
     entry_function.append(hardcode)
-    print(hardcode)
+    print(entry_function)
     exit()
     for i in entry_function:
         driver_main = driver(path, i, stub_paths)

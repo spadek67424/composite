@@ -11,6 +11,60 @@ from debug import log, logresult, logrust, logerror, logterminator
 from capstone.x86 import *
 from capstone import *
 
+hardcode = list(["capmgr_initthd_create", 
+"slm_idle",
+"slm_ipi_process",
+"bounceback",
+"async_thd_parent_perf",
+"async_thd_parent",
+"async_thd_fn",
+"spinner",
+"test_thd_arg",
+"thd_fn_mthds_ring",
+"thd_fn_mthds_classic",
+"test_thds_reg",
+"thds_fpu",
+"term_fn",
+"test_rcv_fn",
+"timer_fn",
+"pingpong_fn",
+"interleave_fn",
+"done_fn",
+"cos_aepthd_fn",
+"sched_thd_create_closure",
+"vmrt_vm_exception_handler",
+"tmr_lo_thd",
+"tmr_hi_thd",
+"sem_lo_thd",
+"sem_hi_thd",
+"evt_lo_thd",
+"evt_hi_thd",
+"ipi_wakeup",
+"ipi_blocked",
+"chan_reader_thd",
+"chan_writer_thd",
+"client",
+"server",
+"yield_lo_thd",
+"yield_hi_thd",
+"low_thread_fn",
+"high_thread_fn",
+"thd1_fn",
+"thd2_fn",
+"allocator_thread_fn",
+"run_tests",
+"sender",
+"receiver",
+"chan_thd",
+"idle_thd",
+"lock_thd",
+"sem_thd",
+"lock_lo_thd",
+"lock_hi_thd",
+"cos_upcall_fn",
+"sched_thd_create"])
+
+
 class parser:
     def __init__(self, symbol, inst, register, execute, disassembler):
         self.symbol = symbol 
@@ -479,9 +533,8 @@ if __name__ == '__main__':
         if stub_name in files:
             stub_paths.append(os.path.join(root, stub_name))
     graph = dict()
-    driver_main = driver(path, "__cosrt_upcall_entry", stub_paths)
-    entry_function.append(driver_main.disasmbler.thread_list)
-    print(entry_function)
+    entry_function.append(hardcode)
+    print(hardcode)
     exit()
     for i in entry_function:
         driver_main = driver(path, i, stub_paths)

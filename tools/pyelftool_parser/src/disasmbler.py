@@ -83,201 +83,189 @@ class disasmbler:
                     if i.type == X86_OP_IMM:
                         tempstack = i.imm
                 self.acquire_stack_size = tempstack
-    def disasmthreadpointer(self, md, ops, addr):   ## TODO(@minghwu): it is really ugly hardcode. We need to do it in composite to make function pointer to section.
-        for inst in md.disasm(ops, addr):
-            if inst.address in self.symbol and self.symbol[inst.address] == "slm_ipithd_create": 
-                self.slm_ipithd_create_address = inst.address
-                self.thread_function_list.append(self.slm_ipithd_create_address)
+    # def disasmthreadpointer(self, md, ops, addr):   ## TODO(@minghwu): it is really ugly hardcode. We need to do it in composite to make function pointer to section.
+    #     for inst in md.disasm(ops, addr):
+    #         if inst.address in self.symbol and self.symbol[inst.address] == "slm_ipithd_create": 
+    #             self.slm_ipithd_create_address = inst.address
+    #             self.thread_function_list.append(self.slm_ipithd_create_address)
                 
-            if inst.address in self.symbol and self.symbol[inst.address] == "capmgr_initthd_create": 
-                self.capmgr_initthd_create_address = inst.address
-                self.thread_function_list.append(self.capmgr_initthd_create_address) 
+    #         if inst.address in self.symbol and self.symbol[inst.address] == "capmgr_initthd_create": 
+    #             self.capmgr_initthd_create_address = inst.address
+    #             self.thread_function_list.append(self.capmgr_initthd_create_address) 
                 
-            if inst.address in self.symbol and self.symbol[inst.address] == "slm_idle":
-                self.slm_idle_address = inst.address
-                self.thread_function_list.append(self.slm_idle_address)
+    #         if inst.address in self.symbol and self.symbol[inst.address] == "slm_idle":
+    #             self.slm_idle_address = inst.address
+    #             self.thread_function_list.append(self.slm_idle_address)
                 
-            if inst.address in self.symbol and self.symbol[inst.address] == "slm_ipi_process":
-                self.slm_ipi_process_address = inst.address
-                self.thread_function_list.append(self.slm_ipi_process_address)
+    #         if inst.address in self.symbol and self.symbol[inst.address] == "slm_ipi_process":
+    #             self.slm_ipi_process_address = inst.address
+    #             self.thread_function_list.append(self.slm_ipi_process_address)
 
-            if inst.address in self.symbol and self.symbol[inst.address] == "bounceback":
-                self.bounceback_address = inst.address
-                self.thread_function_list.append(self.bounceback_address)
+    #         if inst.address in self.symbol and self.symbol[inst.address] == "bounceback":
+    #             self.bounceback_address = inst.address
+    #             self.thread_function_list.append(self.bounceback_address)
 
-            if inst.address in self.symbol and self.symbol[inst.address] == "async_thd_parent_perf":
-                self.async_thd_parent_perf_address = inst.address
-                self.thread_function_list.append(self.async_thd_parent_perf_address)
+    #         if inst.address in self.symbol and self.symbol[inst.address] == "async_thd_parent_perf":
+    #             self.async_thd_parent_perf_address = inst.address
+    #             self.thread_function_list.append(self.async_thd_parent_perf_address)
 
-            if inst.address in self.symbol and self.symbol[inst.address] == "async_thd_parent":
-                self.async_thd_parent_address = inst.address
-                self.thread_function_list.append(self.async_thd_parent_address)
+    #         if inst.address in self.symbol and self.symbol[inst.address] == "async_thd_parent":
+    #             self.async_thd_parent_address = inst.address
+    #             self.thread_function_list.append(self.async_thd_parent_address)
 
-            if inst.address in self.symbol and self.symbol[inst.address] == "async_thd_fn":
-                self.async_thd_fn_address = inst.address
-                self.thread_function_list.append(self.async_thd_fn_address)
+    #         if inst.address in self.symbol and self.symbol[inst.address] == "async_thd_fn":
+    #             self.async_thd_fn_address = inst.address
+    #             self.thread_function_list.append(self.async_thd_fn_address)
 
-            if inst.address in self.symbol and self.symbol[inst.address] == "spinner":
-                self.spinner_address = inst.address
-                self.thread_function_list.append(self.spinner_address)
+    #         if inst.address in self.symbol and self.symbol[inst.address] == "spinner":
+    #             self.spinner_address = inst.address
+    #             self.thread_function_list.append(self.spinner_address)
 
-            if inst.address in self.symbol and self.symbol[inst.address] == "test_thd_arg":
-                self.test_thd_arg_address = inst.address
-                self.thread_function_list.append(self.test_thd_arg_address)
+    #         if inst.address in self.symbol and self.symbol[inst.address] == "test_thd_arg":
+    #             self.test_thd_arg_address = inst.address
+    #             self.thread_function_list.append(self.test_thd_arg_address)
 
-            if inst.address in self.symbol and self.symbol[inst.address] == "thd_fn_mthds_ring":
-                self.thd_fn_mthds_ring_address = inst.address
-                self.thread_function_list.append(self.thd_fn_mthds_ring_address)
+    #         if inst.address in self.symbol and self.symbol[inst.address] == "thd_fn_mthds_ring":
+    #             self.thd_fn_mthds_ring_address = inst.address
+    #             self.thread_function_list.append(self.thd_fn_mthds_ring_address)
 
-            if inst.address in self.symbol and self.symbol[inst.address] == "thd_fn_mthds_classic":
-                self.thd_fn_mthds_classic_address = inst.address
-                self.thread_function_list.append(self.thd_fn_mthds_classic_address)
+    #         if inst.address in self.symbol and self.symbol[inst.address] == "thd_fn_mthds_classic":
+    #             self.thd_fn_mthds_classic_address = inst.address
+    #             self.thread_function_list.append(self.thd_fn_mthds_classic_address)
 
-            if inst.address in self.symbol and self.symbol[inst.address] == "test_thds_reg":
-                self.test_thds_reg_address = inst.address
-                self.thread_function_list.append(self.test_thds_reg_address)
+    #         if inst.address in self.symbol and self.symbol[inst.address] == "test_thds_reg":
+    #             self.test_thds_reg_address = inst.address
+    #             self.thread_function_list.append(self.test_thds_reg_address)
 
-            if inst.address in self.symbol and self.symbol[inst.address] == "thds_fpu":
-                self.thds_fpu_address = inst.address
-                self.thread_function_list.append(self.thds_fpu_address)
+    #         if inst.address in self.symbol and self.symbol[inst.address] == "thds_fpu":
+    #             self.thds_fpu_address = inst.address
+    #             self.thread_function_list.append(self.thds_fpu_address)
 
-            if inst.address in self.symbol and self.symbol[inst.address] == "term_fn":
-                self.term_fn_address = inst.address
-                self.thread_function_list.append(self.term_fn_address)
+    #         if inst.address in self.symbol and self.symbol[inst.address] == "term_fn":
+    #             self.term_fn_address = inst.address
+    #             self.thread_function_list.append(self.term_fn_address)
 
-            if inst.address in self.symbol and self.symbol[inst.address] == "test_rcv_fn":
-                self.test_rcv_fn_address = inst.address
-                self.thread_function_list.append(self.test_rcv_fn_address)
+    #         if inst.address in self.symbol and self.symbol[inst.address] == "test_rcv_fn":
+    #             self.test_rcv_fn_address = inst.address
+    #             self.thread_function_list.append(self.test_rcv_fn_address)
 
-            if inst.address in self.symbol and self.symbol[inst.address] == "timer_fn":
-                self.timer_fn_address = inst.address
-                self.thread_function_list.append(self.timer_fn_address)
+    #         if inst.address in self.symbol and self.symbol[inst.address] == "timer_fn":
+    #             self.timer_fn_address = inst.address
+    #             self.thread_function_list.append(self.timer_fn_address)
 
-            if inst.address in self.symbol and self.symbol[inst.address] == "pingpong_fn":
-                self.pingpong_fn_address = inst.address
-                self.thread_function_list.append(self.pingpong_fn_address)
+    #         if inst.address in self.symbol and self.symbol[inst.address] == "pingpong_fn":
+    #             self.pingpong_fn_address = inst.address
+    #             self.thread_function_list.append(self.pingpong_fn_address)
 
-            if inst.address in self.symbol and self.symbol[inst.address] == "interleave_fn":
-                self.interleave_fn_address = inst.address
-                self.thread_function_list.append(self.interleave_fn_address)
+    #         if inst.address in self.symbol and self.symbol[inst.address] == "interleave_fn":
+    #             self.interleave_fn_address = inst.address
+    #             self.thread_function_list.append(self.interleave_fn_address)
 
-            if inst.address in self.symbol and self.symbol[inst.address] == "done_fn":
-                self.done_fn_address = inst.address
-                self.thread_function_list.append(self.done_fn_address)
+    #         if inst.address in self.symbol and self.symbol[inst.address] == "done_fn":
+    #             self.done_fn_address = inst.address
+    #             self.thread_function_list.append(self.done_fn_address)
 
-            if inst.address in self.symbol and self.symbol[inst.address] == "cos_aepthd_fn":
-                self.cos_aepthd_fn_address = inst.address
-                self.thread_function_list.append(self.cos_aepthd_fn_address)
+    #         if inst.address in self.symbol and self.symbol[inst.address] == "cos_aepthd_fn":
+    #             self.cos_aepthd_fn_address = inst.address
+    #             self.thread_function_list.append(self.cos_aepthd_fn_address)
             
-            if inst.address in self.symbol and self.symbol[inst.address] == "sched_thd_create_closure":
-                self.address = inst.address
-                self.thread_function_list.append(self.address)
-            if inst.address in self.symbol and self.symbol[inst.address] == "vmrt_vm_exception_handler":
-                self.address = inst.address
-                self.thread_function_list.append(self.address)
-            if inst.address in self.symbol and self.symbol[inst.address] == "tmr_lo_thd":
-                self.address = inst.address
-                self.thread_function_list.append(self.address)
-            if inst.address in self.symbol and self.symbol[inst.address] == "tmr_hi_thd":
-                self.address = inst.address
-                self.thread_function_list.append(self.address)
-            if inst.address in self.symbol and self.symbol[inst.address] == "sem_lo_thd":
-                self.address = inst.address
-                self.thread_function_list.append(self.address)
-            if inst.address in self.symbol and self.symbol[inst.address] == "sem_hi_thd":
-                self.address = inst.address
-                self.thread_function_list.append(self.address)
-            if inst.address in self.symbol and self.symbol[inst.address] == "evt_lo_thd":
-                self.address = inst.address
-                self.thread_function_list.append(self.address)
-            if inst.address in self.symbol and self.symbol[inst.address] == "evt_hi_thd":
-                self.address = inst.address
-                self.thread_function_list.append(self.address)
-            if inst.address in self.symbol and self.symbol[inst.address] == "ipi_wakeup":
-                self.address = inst.address
-                self.thread_function_list.append(self.address)
-            if inst.address in self.symbol and self.symbol[inst.address] == "ipi_blocked":
-                self.address = inst.address
-                self.thread_function_list.append(self.address)
-            if inst.address in self.symbol and self.symbol[inst.address] == "chan_reader_thd":
-                self.address = inst.address
-                self.thread_function_list.append(self.address)
-            if inst.address in self.symbol and self.symbol[inst.address] == "chan_writer_thd":
-                self.address = inst.address
-                self.thread_function_list.append(self.address)
-            if inst.address in self.symbol and self.symbol[inst.address] == "client":
-                self.address = inst.address
-                self.thread_function_list.append(self.address)
-            if inst.address in self.symbol and self.symbol[inst.address] == "server":
-                self.address = inst.address
-                self.thread_function_list.append(self.address)
-            if inst.address in self.symbol and self.symbol[inst.address] == "yield_lo_thd":
-                self.address = inst.address
-                self.thread_function_list.append(self.address)
-            if inst.address in self.symbol and self.symbol[inst.address] == "yield_hi_thd":
-                self.address = inst.address
-                self.thread_function_list.append(self.address)
-            if inst.address in self.symbol and self.symbol[inst.address] == "low_thread_fn":
-                self.address = inst.address
-                self.thread_function_list.append(self.address)
-            if inst.address in self.symbol and self.symbol[inst.address] == "high_thread_fn":
-                self.address = inst.address
-                self.thread_function_list.append(self.address)
-            if inst.address in self.symbol and self.symbol[inst.address] == "thd1_fn":
-                self.address = inst.address
-                self.thread_function_list.append(self.address)
-            if inst.address in self.symbol and self.symbol[inst.address] == "thd2_fn":
-                self.address = inst.address
-                self.thread_function_list.append(self.address)
-            if inst.address in self.symbol and self.symbol[inst.address] == "allocator_thread_fn":
-                self.address = inst.address
-                self.thread_function_list.append(self.address)
-            if inst.address in self.symbol and self.symbol[inst.address] == "run_tests":
-                self.address = inst.address
-                self.thread_function_list.append(self.address)
-            if inst.address in self.symbol and self.symbol[inst.address] == "sender":
-                self.address = inst.address
-                self.thread_function_list.append(self.address)
-            if inst.address in self.symbol and self.symbol[inst.address] == "receiver":
-                self.address = inst.address
-                self.thread_function_list.append(self.address)
-            if inst.address in self.symbol and self.symbol[inst.address] == "chan_thd":
-                self.address = inst.address
-                self.thread_function_list.append(self.address)
-            if inst.address in self.symbol and self.symbol[inst.address] == "idle_thd":
-                self.address = inst.address
-                self.thread_function_list.append(self.address)
-            if inst.address in self.symbol and self.symbol[inst.address] == "lock_thd":
-                self.address = inst.address
-                self.thread_function_list.append(self.address)
-            if inst.address in self.symbol and self.symbol[inst.address] == "sem_thd":
-                self.address = inst.address
-                self.thread_function_list.append(self.address)
-            if inst.address in self.symbol and self.symbol[inst.address] == "lock_lo_thd":
-                self.address = inst.address
-                self.thread_function_list.append(self.address)
-            if inst.address in self.symbol and self.symbol[inst.address] == "lock_hi_thd":
-                self.address = inst.address
-                self.thread_function_list.append(self.address)
+    #         if inst.address in self.symbol and self.symbol[inst.address] == "sched_thd_create_closure":
+    #             self.address = inst.address
+    #             self.thread_function_list.append(self.address)
+    #         if inst.address in self.symbol and self.symbol[inst.address] == "vmrt_vm_exception_handler":
+    #             self.address = inst.address
+    #             self.thread_function_list.append(self.address)
+    #         if inst.address in self.symbol and self.symbol[inst.address] == "tmr_lo_thd":
+    #             self.address = inst.address
+    #             self.thread_function_list.append(self.address)
+    #         if inst.address in self.symbol and self.symbol[inst.address] == "tmr_hi_thd":
+    #             self.address = inst.address
+    #             self.thread_function_list.append(self.address)
+    #         if inst.address in self.symbol and self.symbol[inst.address] == "sem_lo_thd":
+    #             self.address = inst.address
+    #             self.thread_function_list.append(self.address)
+    #         if inst.address in self.symbol and self.symbol[inst.address] == "sem_hi_thd":
+    #             self.address = inst.address
+    #             self.thread_function_list.append(self.address)
+    #         if inst.address in self.symbol and self.symbol[inst.address] == "evt_lo_thd":
+    #             self.address = inst.address
+    #             self.thread_function_list.append(self.address)
+    #         if inst.address in self.symbol and self.symbol[inst.address] == "evt_hi_thd":
+    #             self.address = inst.address
+    #             self.thread_function_list.append(self.address)
+    #         if inst.address in self.symbol and self.symbol[inst.address] == "ipi_wakeup":
+    #             self.address = inst.address
+    #             self.thread_function_list.append(self.address)
+    #         if inst.address in self.symbol and self.symbol[inst.address] == "ipi_blocked":
+    #             self.address = inst.address
+    #             self.thread_function_list.append(self.address)
+    #         if inst.address in self.symbol and self.symbol[inst.address] == "chan_reader_thd":
+    #             self.address = inst.address
+    #             self.thread_function_list.append(self.address)
+    #         if inst.address in self.symbol and self.symbol[inst.address] == "chan_writer_thd":
+    #             self.address = inst.address
+    #             self.thread_function_list.append(self.address)
+    #         if inst.address in self.symbol and self.symbol[inst.address] == "client":
+    #             self.address = inst.address
+    #             self.thread_function_list.append(self.address)
+    #         if inst.address in self.symbol and self.symbol[inst.address] == "server":
+    #             self.address = inst.address
+    #             self.thread_function_list.append(self.address)
+    #         if inst.address in self.symbol and self.symbol[inst.address] == "yield_lo_thd":
+    #             self.address = inst.address
+    #             self.thread_function_list.append(self.address)
+    #         if inst.address in self.symbol and self.symbol[inst.address] == "yield_hi_thd":
+    #             self.address = inst.address
+    #             self.thread_function_list.append(self.address)
+    #         if inst.address in self.symbol and self.symbol[inst.address] == "low_thread_fn":
+    #             self.address = inst.address
+    #             self.thread_function_list.append(self.address)
+    #         if inst.address in self.symbol and self.symbol[inst.address] == "high_thread_fn":
+    #             self.address = inst.address
+    #             self.thread_function_list.append(self.address)
+    #         if inst.address in self.symbol and self.symbol[inst.address] == "thd1_fn":
+    #             self.address = inst.address
+    #             self.thread_function_list.append(self.address)
+    #         if inst.address in self.symbol and self.symbol[inst.address] == "thd2_fn":
+    #             self.address = inst.address
+    #             self.thread_function_list.append(self.address)
+    #         if inst.address in self.symbol and self.symbol[inst.address] == "allocator_thread_fn":
+    #             self.address = inst.address
+    #             self.thread_function_list.append(self.address)
+    #         if inst.address in self.symbol and self.symbol[inst.address] == "run_tests":
+    #             self.address = inst.address
+    #             self.thread_function_list.append(self.address)
+    #         if inst.address in self.symbol and self.symbol[inst.address] == "sender":
+    #             self.address = inst.address
+    #             self.thread_function_list.append(self.address)
+    #         if inst.address in self.symbol and self.symbol[inst.address] == "receiver":
+    #             self.address = inst.address
+    #             self.thread_function_list.append(self.address)
+    #         if inst.address in self.symbol and self.symbol[inst.address] == "chan_thd":
+    #             self.address = inst.address
+    #             self.thread_function_list.append(self.address)
+    #         if inst.address in self.symbol and self.symbol[inst.address] == "idle_thd":
+    #             self.address = inst.address
+    #             self.thread_function_list.append(self.address)
+    #         if inst.address in self.symbol and self.symbol[inst.address] == "lock_thd":
+    #             self.address = inst.address
+    #             self.thread_function_list.append(self.address)
+    #         if inst.address in self.symbol and self.symbol[inst.address] == "sem_thd":
+    #             self.address = inst.address
+    #             self.thread_function_list.append(self.address)
+    #         if inst.address in self.symbol and self.symbol[inst.address] == "lock_lo_thd":
+    #             self.address = inst.address
+    #             self.thread_function_list.append(self.address)
+    #         if inst.address in self.symbol and self.symbol[inst.address] == "lock_hi_thd":
+    #             self.address = inst.address
+    #             self.thread_function_list.append(self.address)
 
-        
-        # flag = 0
-        # for inst in md.disasm(ops, addr):
-        #     if inst.address in self.symbol and self.symbol[inst.address] == "cos_upcall_fn":
-        #         flag = 1
-        #     if flag == 1 and inst.id == X86_INS_CALL:
-        #         for i in inst.operands:
-        #             if i.type != X86_OP_MEM and i.type != X86_OP_IMM: ## mean it is not the call instruction we want, because it is memory call.
-        #                 if len(thread_function_list) > 0:
-        #                     self.function_call_address.append(inst.address)
-        #                     self.thread_list= thread_function_list
-        #                     flag = 0
-        for inst in md.disasm(ops, addr):
-            if inst.address in self.symbol and self.symbol[inst.address] == "cos_upcall_fn":
-                self.function_call_address.append(inst.address)
-            if inst.address in self.symbol and self.symbol[inst.address] == "sched_thd_create":
-                self.function_call_address.append(inst.address)
-        self.thread_list= self.thread_function_list
+    #     for inst in md.disasm(ops, addr):
+    #         if inst.address in self.symbol and self.symbol[inst.address] == "cos_upcall_fn":
+    #             self.function_call_address.append(inst.address)
+    #         if inst.address in self.symbol and self.symbol[inst.address] == "sched_thd_create":
+    #             self.function_call_address.append(inst.address)
+    #     self.thread_list= self.thread_function_list
         
     def check_stack_alloca_loop_error(self, md, ops, addr):  #### detection of stack allocation loop. Hardcode the lea, sub 0x1000, or, cmp,
         flaglea = 0                                    #### @@ TODO: minghwu. It is really a pretty bad hardcode, I need to think about it again. 
@@ -381,7 +369,6 @@ class disasmbler:
             md = Cs(CS_ARCH_X86, CS_MODE_64)
             md.detail = True
             self.disasminstpass(md, ops, addr)      ## disasm the instruction into a list, setting up the entry/exit pc.
-            self.disasmthreadpointer(md, ops, addr) ## hardcode the dynamic thread.
             self.check_stack_alloca_loop_error(md, ops, addr)
             self.check_dynamic_stack_alloca(md, ops, addr)
             
@@ -392,7 +379,6 @@ class disasmbler:
                 md = Cs(CS_ARCH_X86, CS_MODE_64)
                 md.detail = True
                 self.disasminstpass(md, ops, addr)      ## disasm the instruction into a list, setting up the entry/exit pc.
-                self.disasmthreadpointer(md, ops, addr) ## hardcode the dynamic thread.
                 self.check_stack_alloca_loop_error(md, ops, addr)
                 self.check_dynamic_stack_alloca(md, ops, addr)
             
@@ -403,7 +389,6 @@ class disasmbler:
                 md = Cs(CS_ARCH_X86, CS_MODE_64)
                 md.detail = True
                 self.disasminstpass(md, ops, addr)      ## disasm the instruction into a list, setting up the entry/exit pc.
-                self.disasmthreadpointer(md, ops, addr) ## hardcode the dynamic thread.
                 self.check_stack_alloca_loop_error(md, ops, addr)
                 self.check_dynamic_stack_alloca(md, ops, addr)
                 

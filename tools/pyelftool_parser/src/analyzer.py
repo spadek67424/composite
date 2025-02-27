@@ -32,6 +32,7 @@ class parser:
         self.retjmpflag = 0
         self.retcallpc = []
         self.seenlist = [] ## handle the while loop jmp.
+        self.seenthreadlist = []
         self.JtypeClass = []
 
     def check_exe_virtual_return(self, address_list): # virtual ret.
@@ -101,6 +102,7 @@ class parser:
                     if thread_function_address in self.symbol and "__cosrt_c" in self.inst_address_to_symbol_name[thread_function_address]:
                         self.edge.add_edge(self.inst_address_to_symbol_name[address_list[self.index]], self.inst_address_to_symbol_name[thread_function_address])
                 self.seenlist.append(address_list[self.index])
+                self.index = self.index + 1
                 self.register.reg["call_or_jmp"] = 0     ## clean the call/jmp indicator. 
                 log("fastpace with hardcode thread table.")
 

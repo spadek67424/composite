@@ -45,6 +45,7 @@ impl TransitionIter for Pydependency {
         // }
         
         keys_vec.push("__cosrt_upcall_entry".to_owned());
+        keys_vec.push("main".to_owned());
         let joined_args = keys_vec.join(","); // Convert Vec<String> -> "arg1 arg2 arg3 ..."
         // Execute the Python script
         println!("join_args : {:#?}", joined_args);

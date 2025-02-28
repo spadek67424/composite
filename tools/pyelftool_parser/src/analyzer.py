@@ -492,9 +492,9 @@ def convert_digraph_to_json_compatible(data, entry_function):
             node_link_data = nx.node_link_data(value[2])
             # Iterate over the links (edges) in the node-link data
             for link in node_link_data['links']:
-                if "cosrt_c" in link['source']:
+                if "cosrt_c" in link['source'] or "cosrt_extern" in link['source']:
                     dependency.add(link['source'])
-                if "cosrt_c" in link['target']:
+                if "cosrt_c" in link['target'] or "cosrt_extern" in link['target']:
                     dependency.add(link['target'])
             # Replace the third element of the tuple with the output set
             if len(dependency) > 0 :

@@ -541,6 +541,6 @@ if __name__ == '__main__':
         driver_main = driver(path, i, stub_paths)
         graph = driver_main.merge_two_dicts(graph, driver_main.run())
         del driver_main
-    converted_data = convert_digraph_to_json_compatible(graph, entry_function)
+    converted_data = convert_digraph_to_json_compatible(graph, entry_function_with_hardcode)
     log("Data has been written to 'output.json'")
     logrust(json.dumps(converted_data, indent=4))

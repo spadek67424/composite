@@ -62,6 +62,7 @@ hardcode = list(["capmgr_initthd_create",
 "lock_lo_thd",
 "lock_hi_thd",
 "cos_upcall_fn",
+"slm_thd_alloc_in",
 "sched_thd_create"])
 
 

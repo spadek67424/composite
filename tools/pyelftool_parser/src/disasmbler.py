@@ -414,9 +414,9 @@ class disasmbler:
                          if isinstance(s, SymbolTableSection)]
             for section in symbol_tables:
                 for symbol in section.iter_symbols():
-                    if "__cosrt_s" in symbol.name:
-                        if symbol.name.replace("__cosrt_s_", "") in self.invocation_function:
-                            self.entry_function_list.append(symbol.name)
+                    # if "__cosrt_s" in symbol.name:
+                    #     if symbol.name.replace("__cosrt_s_", "") in self.invocation_function:
+                    #         self.entry_function_list.append(symbol.name)
                     
                     if "__cosrt_extern" in symbol.name:
                         if symbol.name.replace("__cosrt_extern_", "") in self.invocation_function:

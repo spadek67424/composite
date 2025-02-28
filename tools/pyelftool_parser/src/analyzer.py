@@ -62,6 +62,7 @@ hardcode = list(["capmgr_initthd_create",
 "lock_lo_thd",
 "lock_hi_thd",
 "cos_upcall_fn",
+"slm_thd_alloc_in",
 "sched_thd_create"])
 
 
@@ -437,7 +438,7 @@ class driver:
             if key not in dict1:
                 self.stackfunction[key] = dict2[key]
         return self.stackfunction
-    def run(self, hardcodeflag = 0):
+    def run(self):
         self.parser.stack_analyzer(self.stackfunction)
         try:
             cycles = list(nx.simple_cycles(self.parser.edge))
@@ -492,10 +493,12 @@ def convert_digraph_to_json_compatible(data, entry_function):
             node_link_data = nx.node_link_data(value[2])
             # Iterate over the links (edges) in the node-link data
             for link in node_link_data['links']:
-                if "cosrt_c" in link['source'] or "cosrt_extern" in link['source']:
-                    dependency.add(link['source'])
-                if "cosrt_c" in link['target'] or "cosrt_extern" in link['target']:
-                    dependency.add(link['target'])
+                # if "cosrt_c" in link['source'] or "cosrt_extern" in link['source']:
+                #     dependency.add(link['source'])
+                # if "cosrt_c" in link['target'] or "cosrt_extern" in link['target']:
+                #     dependency.add(link['target'])
+                dependency.add(link['source'])
+                dependency.add(link['target'])
             # Replace the third element of the tuple with the output set
             if len(dependency) > 0 :
                 result["entry_function"] = key 

@@ -142,7 +142,7 @@ class parser:
                     self.JtypeClass.append(jmp_class.JmpContext(self.index+1, self.index, self.register.reg["stack"], self.register.reg["rspbegin"], self.register.reg["rsp"]))
                 if self.invo_jmp_table[address_list[self.index]] in self.symbol:
                     self.JtypeClass.append(jmp_class.JmpContext(self.index+1, self.index, self.register.reg["stack"], self.register.reg["rspbegin"], self.register.reg["rsp"]))
-                    if "__cosrt_c" in self.inst_address_to_symbol_name[self.invo_jmp_table[address_list[self.index]]]:
+                    if "__cosrt_c" in self.inst_address_to_symbol_name[self.invo_jmp_table[address_list[self.index]]] or "__cosrt_extern" in self.inst_address_to_symbol_name[self.invo_jmp_table[address_list[self.index]]]:
                         self.edge.add_edge(self.inst_address_to_symbol_name[address_list[self.index]], self.inst_address_to_symbol_name[self.invo_jmp_table[address_list[self.index]]])
                 self.seenlist.append(address_list[self.index])
                 self.index = address_list.index(self.invo_jmp_table[address_list[self.index]])
@@ -207,7 +207,7 @@ class parser:
                             self.JtypeClass.append(jmp_class.JmpContext(self.index+1, self.index, self.register.reg["stack"], self.register.reg["rspbegin"], self.register.reg["rsp"]))
                             self.seenlist.append(address_list[self.index])
                             self.stackfunction[self.symbol[self.register.reg["pc"]]] = ((self.register.reg["pc"], -1))
-                            if self.register.reg["pc"] in self.symbol and  "__cosrt_c" in self.inst_address_to_symbol_name[self.register.reg["pc"]]:
+                            if self.register.reg["pc"] in self.symbol and  ("__cosrt_c" in self.inst_address_to_symbol_name[self.register.reg["pc"]] or "__cosrt_extern" in self.inst_address_to_symbol_name[self.register.reg["pc"]]):
                                 self.edge.add_edge(self.inst_address_to_symbol_name[address_list[self.index]], self.inst_address_to_symbol_name[self.register.reg["pc"]])
                             self.index = address_list.index(self.register.reg["pc"])
                     else: ## It is seen, time to pop.
@@ -240,7 +240,7 @@ class parser:
                     elif address_list[self.index] not in self.seenlist:
                         self.seenlist.append(address_list[self.index])
                         self.JtypeClass.append(jmp_class.JmpContext(self.index+1, self.index, self.register.reg["stack"], self.register.reg["rspbegin"], self.register.reg["rsp"]))
-                        if self.register.reg["pc"] in self.symbol and "__cosrt_c" in self.inst_address_to_symbol_name[self.register.reg["pc"]]:
+                        if self.register.reg["pc"] in self.symbol and ("__cosrt_c" in self.inst_address_to_symbol_name[self.register.reg["pc"]] or "__cosrt_extern" in self.inst_address_to_symbol_name[self.register.reg["pc"]]):
                             self.edge.add_edge(self.inst_address_to_symbol_name[address_list[self.index]], self.inst_address_to_symbol_name[self.register.reg["pc"]])
                         self.index = address_list.index(self.register.reg["pc"])
                     else: ## it is seen, time to pop.
@@ -437,7 +437,7 @@ class driver:
             if key not in dict1:
                 self.stackfunction[key] = dict2[key]
         return self.stackfunction
-    def run(self):
+    def run(self, hardcodeflag = 0):
         self.parser.stack_analyzer(self.stackfunction)
         try:
             cycles = list(nx.simple_cycles(self.parser.edge))

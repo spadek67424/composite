@@ -437,7 +437,7 @@ class driver:
             if key not in dict1:
                 self.stackfunction[key] = dict2[key]
         return self.stackfunction
-    def run(self, hardcodeflag = 0):
+    def run(self):
         self.parser.stack_analyzer(self.stackfunction)
         try:
             cycles = list(nx.simple_cycles(self.parser.edge))

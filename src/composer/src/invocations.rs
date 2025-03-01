@@ -75,7 +75,7 @@ fn sinvs_generate(id: &ComponentId, s: &SystemState) -> Result<Vec<SInv>, String
     // find each undefined symbol
     for (sname, symbinfo) in s.get_objs_id(id).client_symbs() {
         let mut found = false;
-        if !pydep.contains(&format!("__cosrt_c_{}", sname)) && !pydep.contains(&format!("__cosrt_extern_{}", sname)) && !pydep.contains(sname)  && !sname.contains("init_exit") && !sname.contains("addr_get") && !sname.contains("__evt") &&  !white_list.contains(sname) { // && !sname.contains("sched") && !sname.contains("tmrmgr") {// && !white_list.contains(sname) { //&& !sname.contains("capmgr") { //&&  !white_list.contains(sname) { // {
+        if !pydep.contains(&format!("__cosrt_c_{}", sname)) && !pydep.contains(&format!("__cosrt_extern_{}", sname)) && !pydep.contains(sname)  && !sname.contains("init_exit") && !sname.contains("addr_get") &&  !white_list.contains(sname) { // && !sname.contains("sched") && !sname.contains("tmrmgr") {// && !white_list.contains(sname) { //&& !sname.contains("capmgr") { //&&  !white_list.contains(sname) { // {
             println!("sname is not find in pydep: {}", sname);
             continue;
         }

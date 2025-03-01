@@ -65,7 +65,9 @@ hardcode = list(["capmgr_initthd_create",
 "slm_thd_alloc_in",
 "sched_thd_create",
 "sched_thd_wakeup",
-"sched_blkpt_trigger"])
+"sched_blkpt_trigger",
+"sched_blkpt_block",
+"sched_blkpt_alloc"])
 
 
 class parser:

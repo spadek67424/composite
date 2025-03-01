@@ -28,14 +28,14 @@ fn sinvs_generate(id: &ComponentId, s: &SystemState) -> Result<Vec<SInv>, String
     // "__evt_add".to_string(),
     // "__evt_rem".to_string(),
         // "sched_thd_wakeup".to_string(),
-        // "sched_blkpt_trigger".to_string(),
-        // "sched_blkpt_free".to_string(),
-        // "sched_thd_block".to_string(),
-        // "sched_aep_create_closure".to_string(),
-        // "sched_thd_create_closure".to_string(),
-        // "sched_thd_delete".to_string(),
-        // "sched_blkpt_block".to_string(),
-        // "sched_blkpt_alloc".to_string(),
+        "sched_blkpt_trigger".to_string(),
+        "sched_blkpt_free".to_string(),
+        "sched_thd_block".to_string(),
+        "sched_aep_create_closure".to_string(),
+        "sched_thd_create_closure".to_string(),
+        "sched_thd_delete".to_string(),
+        "sched_blkpt_block".to_string(),
+        "sched_blkpt_alloc".to_string(),
         // "sched_thd_param_set".to_string(),
         // "sched_set_tls".to_string(),
         // "sched_debug_thd_state".to_string(),
@@ -58,24 +58,24 @@ fn sinvs_generate(id: &ComponentId, s: &SystemState) -> Result<Vec<SInv>, String
         // "capmgr_shared_kernel_page_create".to_string(),
         // "capmgr_asnd_create".to_string(),
         // "capmgr_thd_create_ext".to_string(),
-        "capmgr_asnd_rcv_create".to_string(),
-        "capmgr_initaep_create".to_string(),
-        "capmgr_aep_create_ext".to_string(),
-        "capmgr_set_tls".to_string(),
-        "capmgr_asnd_key_create".to_string(),
-        "memmgr_shared_page_map_aligned".to_string(),
-        "memmgr_shared_page_allocn".to_string(),
-        "memmgr_map_phys_to_virt".to_string(),
-        "memmgr_shared_page_map".to_string(),
-        "memmgr_shared_page_map_aligned_in_vm".to_string(),
-        "memmgr_heap_page_allocn_aligned".to_string(),
-        "memmgr_virt_to_phys".to_string(),
+    //     "capmgr_asnd_rcv_create".to_string(),
+    //     "capmgr_initaep_create".to_string(),
+    //     "capmgr_aep_create_ext".to_string(),
+    //     "capmgr_set_tls".to_string(),
+    //     "capmgr_asnd_key_create".to_string(),
+    //     "memmgr_shared_page_map_aligned".to_string(),
+    //     "memmgr_shared_page_allocn".to_string(),
+    //     "memmgr_map_phys_to_virt".to_string(),
+    //     "memmgr_shared_page_map".to_string(),
+    //     "memmgr_shared_page_map_aligned_in_vm".to_string(),
+    //     "memmgr_heap_page_allocn_aligned".to_string(),
+    //     "memmgr_virt_to_phys".to_string(),
 
     ];
     // find each undefined symbol
     for (sname, symbinfo) in s.get_objs_id(id).client_symbs() {
         let mut found = false;
-        if !pydep.contains(&format!("__cosrt_c_{}", sname)) && !pydep.contains(&format!("__cosrt_extern_{}", sname)) && !pydep.contains(sname)  && !sname.contains("init_exit") && !sname.contains("addr_get") && !white_list.contains(sname) { //&& !sname.contains("capmgr") { //&&  !white_list.contains(sname) { // {
+        if !pydep.contains(&format!("__cosrt_c_{}", sname)) && !pydep.contains(&format!("__cosrt_extern_{}", sname)) && !pydep.contains(sname)  && !sname.contains("init_exit") && !sname.contains("addr_get") && !sname.contains("__evt") &&  !white_list.contains(sname) { // && !sname.contains("sched") && !sname.contains("tmrmgr") {// && !white_list.contains(sname) { //&& !sname.contains("capmgr") { //&&  !white_list.contains(sname) { // {
             println!("sname is not find in pydep: {}", sname);
             continue;
         }
